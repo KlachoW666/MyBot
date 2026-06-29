@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.BrandHeader
 import com.fuelmap.app.ui.common.SupportFooter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +66,10 @@ fun LoginScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            BrandHeader(
+                subtitle = "Карта наличия топлива на АЗС",
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             OutlinedTextField(
                 value = login,
                 onValueChange = { login = it },

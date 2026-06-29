@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.ConfirmationType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.util.MarkerIcons
 import com.fuelmap.app.util.TimeFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,8 +94,12 @@ fun StationScreen(
 
             val mark = s.currentMark
             val freshness = MarkFreshness.of(mark?.mark?.createdAt, mark?.hasAvailableFuel ?: false)
+            val accent = Color(MarkerIcons.colorFor(freshness))
 
-            Card(Modifier.fillMaxWidth()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.14f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = statusTitle(freshness),
