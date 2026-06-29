@@ -88,6 +88,15 @@ class AdminViewModel(
         }
     }
 
+    fun importStations() {
+        viewModelScope.launch {
+            _message.value = "Загружаю АЗС из OpenStreetMap…"
+            stationRepo.importFromOsm()
+                .onSuccess { _message.value = "Готово: загружено $it АЗС из OSM" }
+                .onFailure { _message.value = "Ошибка загрузки: ${it.message ?: "нет сети"}" }
+        }
+    }
+
     fun addStation(station: GasStationEntity, onDone: () -> Unit) {
         viewModelScope.launch {
             stationRepo.addStation(station)

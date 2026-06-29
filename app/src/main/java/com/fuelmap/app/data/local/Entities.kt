@@ -54,7 +54,7 @@ data class RegionEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("regionId")]
+    indices = [Index("regionId"), Index(value = ["lat", "lng"], unique = true)]
 )
 data class GasStationEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

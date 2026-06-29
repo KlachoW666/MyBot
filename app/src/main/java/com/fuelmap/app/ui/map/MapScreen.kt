@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.FuelType
+import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.SupportFooter
 import com.fuelmap.app.util.MarkerIcons
@@ -150,6 +151,11 @@ private fun YandexMap(
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
 
+    // Иконки маркеров кэшируются (всего 4 варианта) — не создаём bitmap на каждую АЗС.
+    val markerIcons = remember {
+        MarkFreshness.entries.associateWith { ImageProvider.fromBitmap(MarkerIcons.bitmap(it)) }
+    }
+
     // Держим сильные ссылки на тап-листенеры: MapKit хранит их как weak references.
     val tapListeners = remember { mutableListOf<MapObjectTapListener>() }
 
@@ -187,7 +193,7 @@ private fun YandexMap(
             val point = Point(marker.station.station.lat, marker.station.station.lng)
             val placemark = map.mapObjects.addPlacemark()
             placemark.geometry = point
-            placemark.setIcon(ImageProvider.fromBitmap(MarkerIcons.bitmap(marker.freshness)))
+            markerIcons[marker.freshness]?.let { placemark.setIcon(it) }
             val stationId = marker.station.station.id
             placemark.userData = stationId
             val listener = MapObjectTapListener { _, _ ->

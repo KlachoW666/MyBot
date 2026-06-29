@@ -5,6 +5,7 @@ import com.fuelmap.app.data.local.RegionDao
 import com.fuelmap.app.data.local.RegionEntity
 import com.fuelmap.app.data.local.StationDao
 import com.fuelmap.app.data.local.StationWithCurrentMark
+import com.fuelmap.app.data.remote.OsmStationImporter
 import kotlinx.coroutines.flow.Flow
 
 class StationRepository(
@@ -30,4 +31,23 @@ class StationRepository(
         regionDao.update(region.copy(enabled = enabled))
 
     suspend fun addStation(station: GasStationEntity): Long = stationDao.insert(station)
+
+    suspend fun stationCount(): Int = stationDao.count()
+
+    /**
+     * Подгружает все АЗС (amenity=fuel) из OpenStreetMap по границам активных регионов.
+     * Дубликаты игнорируются по уникальному индексу (lat, lng).
+     * @return количество найденных в OSM объектов.
+     */
+    suspend fun importFromOsm(): Result<Int> = runCatching {
+        var total = 0
+        for (region in regionDao.getEnabled()) {
+            val stations = OsmStationImporter.fetchStations(region)
+            if (stations.isNotEmpty()) {
+                stationDao.insertAll(stations)
+                total += stations.size
+            }
+        }
+        total
+    }
 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -72,6 +73,11 @@ fun AdminRegionsScreen(
                     "Включите регион, чтобы там можно было видеть АЗС и ставить метки.",
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+            item {
+                Button(onClick = { vm.importStations() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Загрузить/обновить АЗС из OpenStreetMap")
+                }
             }
             items(regions) { region ->
                 Card(Modifier.fillMaxWidth()) {

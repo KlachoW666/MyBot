@@ -11,7 +11,7 @@ import com.fuelmap.app.data.session.SessionManager
 /** Простой ручной контейнер зависимостей (без Hilt). */
 class AppContainer(context: Context) {
     private val db = AppDatabase.get(context)
-    private val session = SessionManager(context)
+    val session = SessionManager(context)
 
     val authRepository = AuthRepository(db.userDao(), session)
     val stationRepository = StationRepository(db.stationDao(), db.regionDao())

@@ -27,6 +27,14 @@ class FuelMapApplication : Application() {
         // Идемпотентный сидинг: супер-админ, регионы, базовые АЗС.
         appScope.launch {
             DatabaseSeeder(container.database).seed()
+            autoImportStations()
         }
+    }
+
+    /** Однократно подгружает все АЗС регионов из OpenStreetMap (в фоне, при наличии сети). */
+    private suspend fun autoImportStations() {
+        if (container.session.isOsmImported()) return
+        container.stationRepository.importFromOsm()
+            .onSuccess { count -> if (count > 0) container.session.setOsmImported(true) }
     }
 }

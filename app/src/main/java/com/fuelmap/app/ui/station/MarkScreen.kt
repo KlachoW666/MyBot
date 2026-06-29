@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -70,13 +72,19 @@ fun MarkScreen(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var locating by remember { mutableStateOf(false) }
 
     fun buildEntries(): List<FuelEntry> = selected.map { (type, input) ->
         FuelEntry(type, input.available, input.price.replace(',', '.').toDoubleOrNull() ?: 0.0)
     }
 
     suspend fun submitWithLocation() {
-        val loc = LocationProvider.currentLocation(context)
+        locating = true
+        val loc = try {
+            LocationProvider.currentLocation(context)
+        } finally {
+            locating = false
+        }
         vm.submitMark(stationId, buildEntries(), queue, loc?.latitude, loc?.longitude, onDone = onBack)
     }
 
@@ -178,9 +186,18 @@ fun MarkScreen(
 
             Button(
                 onClick = { attemptSubmit() },
+                enabled = !locating,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Сохранить отметку")
+                if (locating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp).padding(end = 8.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Text("Определяем геолокацию…")
+                } else {
+                    Text("Сохранить отметку")
+                }
             }
 
             SupportFooter(modifier = Modifier.padding(top = 4.dp))
