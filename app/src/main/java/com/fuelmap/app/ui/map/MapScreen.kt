@@ -7,13 +7,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,12 +29,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.fuelmap.app.util.LocationProvider
+import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -60,6 +70,26 @@ fun MapScreen(
 ) {
     val markers by vm.markers.collectAsStateWithLifecycle()
     val filter by vm.fuelFilter.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var focusPoint by remember { mutableStateOf<Point?>(null) }
+
+    fun locate() {
+        scope.launch {
+            LocationProvider.currentLocation(context)?.let {
+                focusPoint = Point(it.latitude, it.longitude)
+            }
+        }
+    }
+    val locationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) locate() }
+
+    fun onLocateClick() {
+        if (LocationProvider.hasPermission(context)) locate()
+        else locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
 
     Scaffold(topBar = {
         CenterAlignedTopAppBar(
@@ -95,9 +125,19 @@ fun MapScreen(
         ) {
             YandexMap(
                 markers = markers,
+                focusPoint = focusPoint,
                 onStationTap = onStationClick,
                 modifier = Modifier.fillMaxSize()
             )
+
+            FloatingActionButton(
+                onClick = { onLocateClick() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(Icons.Filled.MyLocation, contentDescription = "Моя геолокация")
+            }
 
             // Фильтр по типу топлива
             Surface(
@@ -150,6 +190,7 @@ fun MapScreen(
 @Composable
 private fun YandexMap(
     markers: List<StationMarker>,
+    focusPoint: Point?,
     onStationTap: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -188,6 +229,13 @@ private fun YandexMap(
         mapView.mapWindow.map.move(
             CameraPosition(Point(55.75, 37.62), 9.0f, 0.0f, 0.0f)
         )
+    }
+
+    // Переход к местоположению пользователя по кнопке.
+    LaunchedEffect(focusPoint) {
+        focusPoint?.let {
+            mapView.mapWindow.map.move(CameraPosition(it, 15.0f, 0.0f, 0.0f))
+        }
     }
 
     // Перерисовка маркеров при изменении данных.

@@ -7,6 +7,7 @@ import com.fuelmap.app.data.session.SessionManager
 import com.fuelmap.app.util.PlateValidator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
@@ -85,6 +86,9 @@ class AuthRepository(
         userDao.update(updated)
         return AuthResult.Success(updated)
     }
+
+    /** Текущий пользователь на момент вызова (надёжно, без зависимости от подписки UI). */
+    suspend fun currentUserOnce(): UserEntity? = currentUser.first()
 
     suspend fun logout() = session.signOut()
 }

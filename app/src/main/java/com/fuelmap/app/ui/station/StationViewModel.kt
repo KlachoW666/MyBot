@@ -20,11 +20,11 @@ import kotlinx.coroutines.launch
 class StationViewModel(
     private val stationRepo: StationRepository,
     private val markRepo: MarkRepository,
-    authRepo: AuthRepository
+    private val authRepo: AuthRepository
 ) : ViewModel() {
 
     val currentUser: StateFlow<UserEntity?> =
-        authRepo.currentUser.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        authRepo.currentUser.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
@@ -45,32 +45,36 @@ class StationViewModel(
         userLng: Double?,
         onDone: () -> Unit
     ) {
-        val user = currentUser.value
-        if (user == null) {
-            _message.value = "Войдите, чтобы оставлять отметки"
-            return
-        }
-        if (userLat == null || userLng == null) {
-            _message.value = "Не удалось определить геолокацию. Включите GPS и разрешите доступ к местоположению."
-            return
-        }
         viewModelScope.launch {
+            val user = authRepo.currentUserOnce()
+            if (user == null) {
+                _message.value = "Войдите, чтобы оставлять отметки"
+                return@launch
+            }
             val station = stationRepo.getStation(stationId)
             if (station == null) {
                 _message.value = "АЗС не найдена"
                 return@launch
             }
-            if (stationRepo.enabledRegionAt(station.lat, station.lng) == null) {
-                _message.value = "Регион пока не поддерживается"
-                return@launch
+
+            // Админы и супер-админы ставят метки на любые АЗС без проверки расстояния и региона.
+            if (!user.role.isAdmin) {
+                if (stationRepo.enabledRegionAt(station.lat, station.lng) == null) {
+                    _message.value = "Регион пока не поддерживается"
+                    return@launch
+                }
+                if (userLat == null || userLng == null) {
+                    _message.value = "Не удалось определить геолокацию. Включите GPS и разрешите доступ к местоположению."
+                    return@launch
+                }
+                val distance = GeoUtils.distanceMeters(userLat, userLng, station.lat, station.lng)
+                if (distance > MAX_MARK_DISTANCE_METERS) {
+                    _message.value = "Вы слишком далеко от АЗС (%.1f км). Отметку можно ставить только рядом с заправкой."
+                        .format(distance / 1000.0)
+                    return@launch
+                }
             }
-            // Защита от меток «издалека»: пользователь должен физически находиться у АЗС.
-            val distance = GeoUtils.distanceMeters(userLat, userLng, station.lat, station.lng)
-            if (distance > MAX_MARK_DISTANCE_METERS) {
-                _message.value = "Вы слишком далеко от АЗС (%.1f км). Отметку можно ставить только рядом с заправкой."
-                    .format(distance / 1000.0)
-                return@launch
-            }
+
             markRepo.submitMark(stationId, user.id, entries, queue)
                 .onSuccess {
                     _message.value = "Спасибо! Отметка сохранена"
