@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.fuelmap.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.fuelmap.app"
