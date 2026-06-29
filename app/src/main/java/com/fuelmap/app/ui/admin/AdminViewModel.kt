@@ -43,6 +43,23 @@ class AdminViewModel(
     val regions: StateFlow<List<RegionEntity>> =
         stationRepo.regions.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val pendingStations: StateFlow<List<GasStationEntity>> =
+        stationRepo.pendingStations.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun approveStation(id: Long) {
+        viewModelScope.launch {
+            stationRepo.approveStation(id)
+            _message.value = "АЗС одобрена и видна всем"
+        }
+    }
+
+    fun rejectStation(id: Long) {
+        viewModelScope.launch {
+            stationRepo.rejectStation(id)
+            _message.value = "АЗС отклонена"
+        }
+    }
+
     fun userHistory(userId: Long): Flow<List<MarkWithItems>> = markRepo.userHistory(userId)
 
     fun observeUser(id: Long): StateFlow<UserEntity?> =

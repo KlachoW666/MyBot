@@ -17,6 +17,7 @@ object Routes {
     const val ADMIN = "admin"
     const val ADMIN_REGIONS = "admin/regions"
     const val ADMIN_ADD_STATION = "admin/add_station"
+    const val ADMIN_MODERATION = "admin/moderation"
     const val ADMIN_USER = "admin/user/{userId}"
     fun adminUser(id: Long) = "admin/user/$id"
 

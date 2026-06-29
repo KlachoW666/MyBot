@@ -19,6 +19,30 @@ object MarkerIcons {
         MarkFreshness.NO_FUEL -> Color.rgb(0xE5, 0x39, 0x35) // красный
     }
 
+    /** Синяя точка «вы здесь». */
+    fun userBitmap(sizePx: Int = 64): Bitmap {
+        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        val r = sizePx / 2f
+        val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(60, 0x21, 0x96, 0xF3)
+            style = Paint.Style.FILL
+        }
+        val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(0x21, 0x96, 0xF3)
+            style = Paint.Style.FILL
+        }
+        val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = sizePx * 0.08f
+        }
+        canvas.drawCircle(r, r, r, halo)
+        canvas.drawCircle(r, r, sizePx * 0.22f, dot)
+        canvas.drawCircle(r, r, sizePx * 0.22f, border)
+        return bmp
+    }
+
     fun bitmap(freshness: MarkFreshness, sizePx: Int = 72): Bitmap {
         val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)

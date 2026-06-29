@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,14 +39,16 @@ import com.fuelmap.app.ui.AppViewModelProvider
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     onUserClick: (Long) -> Unit,
     onRegions: () -> Unit,
     onAddStation: () -> Unit,
+    onModeration: () -> Unit,
     vm: AdminViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val users by vm.users.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
+    val pending by vm.pendingStations.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
@@ -58,8 +61,10 @@ fun AdminScreen(
             TopAppBar(
                 title = { Text("Админка") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        }
                     }
                 }
             )
@@ -73,6 +78,11 @@ fun AdminScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            item {
+                Button(onClick = onModeration, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (pending.isEmpty()) "Модерация АЗС" else "Модерация АЗС (${pending.size})")
+                }
+            }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onRegions) { Text("Регионы и покрытие") }

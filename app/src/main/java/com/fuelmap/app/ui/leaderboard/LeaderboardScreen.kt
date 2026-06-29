@@ -30,7 +30,7 @@ import com.fuelmap.app.ui.AppViewModelProvider
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeaderboardScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     vm: LeaderboardViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val region by vm.region.collectAsStateWithLifecycle()
@@ -40,8 +40,10 @@ fun LeaderboardScreen(
         TopAppBar(
             title = { Text("Лидеры: $region") },
             navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                if (onBack != null) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    }
                 }
             }
         )

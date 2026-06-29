@@ -1,13 +1,29 @@
 package com.fuelmap.app.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fuelmap.app.data.local.UserEntity
 import com.fuelmap.app.ui.admin.AdminAddStationScreen
+import com.fuelmap.app.ui.admin.AdminModerationScreen
 import com.fuelmap.app.ui.admin.AdminRegionsScreen
 import com.fuelmap.app.ui.admin.AdminScreen
 import com.fuelmap.app.ui.admin.AdminUserScreen
@@ -20,103 +36,138 @@ import com.fuelmap.app.ui.profile.ProfileScreen
 import com.fuelmap.app.ui.station.MarkScreen
 import com.fuelmap.app.ui.station.StationScreen
 
+private data class Tab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+
 @Composable
 fun NavGraph(currentUser: UserEntity?) {
     val nav = rememberNavController()
     val isLoggedIn = currentUser != null
     val isAdmin = currentUser?.role?.isAdmin == true
 
-    NavHost(navController = nav, startDestination = Routes.MAP) {
+    val backStackEntry by nav.currentBackStackEntryAsState()
+    val route = backStackEntry?.destination?.route
 
-        composable(Routes.MAP) {
-            MapScreen(
-                isLoggedIn = isLoggedIn,
-                isAdmin = isAdmin,
-                onStationClick = { nav.navigate(Routes.station(it)) },
-                onLoginClick = { nav.navigate(Routes.LOGIN) },
-                onProfileClick = { nav.navigate(Routes.PROFILE) },
-                onAdminClick = { nav.navigate(Routes.ADMIN) }
-            )
-        }
+    val tabs = buildList {
+        add(Tab(Routes.MAP, "Карта", Icons.Filled.Map))
+        add(Tab(Routes.LEADERBOARD, "Лидеры", Icons.Filled.Leaderboard))
+        add(Tab(Routes.PROFILE, "Профиль", Icons.Filled.Person))
+        if (isAdmin) add(Tab(Routes.ADMIN, "Админ", Icons.Filled.AdminPanelSettings))
+    }
+    val showBottomBar = tabs.any { it.route == route }
 
-        composable(Routes.LOGIN) {
-            LoginScreen(
-                onBack = { nav.popBackStack() },
-                onLoggedIn = { nav.popBackStack(Routes.MAP, inclusive = false) },
-                onRegister = { nav.navigate(Routes.REGISTER) },
-                onReset = { nav.navigate(Routes.RESET) }
-            )
-        }
-        composable(Routes.REGISTER) {
-            RegisterScreen(
-                onBack = { nav.popBackStack() },
-                onRegistered = { nav.popBackStack(Routes.MAP, inclusive = false) }
-            )
-        }
-        composable(Routes.RESET) {
-            ResetScreen(
-                onBack = { nav.popBackStack() },
-                onDone = { nav.popBackStack(Routes.LOGIN, inclusive = false) }
-            )
-        }
-
-        composable(Routes.PROFILE) {
-            ProfileScreen(
-                onBack = { nav.popBackStack() },
-                onLoggedOut = { nav.popBackStack(Routes.MAP, inclusive = false) },
-                onLeaderboard = { nav.navigate(Routes.LEADERBOARD) }
-            )
-        }
-        composable(Routes.LEADERBOARD) {
-            LeaderboardScreen(onBack = { nav.popBackStack() })
-        }
-
-        composable(
-            Routes.STATION,
-            arguments = listOf(navArgument(Routes.ARG_STATION_ID) { type = NavType.LongType })
-        ) { entry ->
-            val id = entry.arguments?.getLong(Routes.ARG_STATION_ID) ?: 0L
-            StationScreen(
-                stationId = id,
-                onBack = { nav.popBackStack() },
-                onMark = { stationId ->
-                    if (isLoggedIn) nav.navigate(Routes.mark(stationId)) else nav.navigate(Routes.LOGIN)
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    tabs.forEach { tab ->
+                        NavigationBarItem(
+                            selected = route == tab.route,
+                            onClick = {
+                                if (route != tab.route) {
+                                    nav.navigate(tab.route) {
+                                        popUpTo(Routes.MAP) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            label = { Text(tab.label) }
+                        )
+                    }
                 }
-            )
-        }
-        composable(
-            Routes.MARK,
-            arguments = listOf(navArgument(Routes.ARG_STATION_ID) { type = NavType.LongType })
-        ) { entry ->
-            val id = entry.arguments?.getLong(Routes.ARG_STATION_ID) ?: 0L
-            MarkScreen(stationId = id, onBack = { nav.popBackStack() })
-        }
-
-        composable(Routes.ADMIN) {
-            // Защита: только админ/супер-админ
-            if (!isAdmin) {
-                nav.popBackStack(Routes.MAP, inclusive = false)
-            } else {
-                AdminScreen(
-                    onBack = { nav.popBackStack() },
-                    onUserClick = { nav.navigate(Routes.adminUser(it)) },
-                    onRegions = { nav.navigate(Routes.ADMIN_REGIONS) },
-                    onAddStation = { nav.navigate(Routes.ADMIN_ADD_STATION) }
-                )
             }
         }
-        composable(Routes.ADMIN_REGIONS) {
-            AdminRegionsScreen(onBack = { nav.popBackStack() })
-        }
-        composable(Routes.ADMIN_ADD_STATION) {
-            AdminAddStationScreen(onBack = { nav.popBackStack() })
-        }
-        composable(
-            Routes.ADMIN_USER,
-            arguments = listOf(navArgument(Routes.ARG_USER_ID) { type = NavType.LongType })
-        ) { entry ->
-            val id = entry.arguments?.getLong(Routes.ARG_USER_ID) ?: 0L
-            AdminUserScreen(userId = id, onBack = { nav.popBackStack() })
+    ) { innerPadding ->
+        NavHost(
+            navController = nav,
+            startDestination = Routes.MAP,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Routes.MAP) {
+                MapScreen(
+                    onStationDetails = { nav.navigate(Routes.station(it)) },
+                    onMark = { stationId ->
+                        if (isLoggedIn) nav.navigate(Routes.mark(stationId)) else nav.navigate(Routes.LOGIN)
+                    }
+                )
+            }
+
+            composable(Routes.LEADERBOARD) { LeaderboardScreen() }
+
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onLogin = { nav.navigate(Routes.LOGIN) },
+                    onRegister = { nav.navigate(Routes.REGISTER) }
+                )
+            }
+
+            composable(Routes.ADMIN) {
+                if (!isAdmin) {
+                    LeaderboardScreen()
+                } else {
+                    AdminScreen(
+                        onUserClick = { nav.navigate(Routes.adminUser(it)) },
+                        onRegions = { nav.navigate(Routes.ADMIN_REGIONS) },
+                        onAddStation = { nav.navigate(Routes.ADMIN_ADD_STATION) },
+                        onModeration = { nav.navigate(Routes.ADMIN_MODERATION) }
+                    )
+                }
+            }
+
+            composable(Routes.LOGIN) {
+                LoginScreen(
+                    onBack = { nav.popBackStack() },
+                    onLoggedIn = { nav.popBackStack(Routes.MAP, inclusive = false) },
+                    onRegister = { nav.navigate(Routes.REGISTER) },
+                    onReset = { nav.navigate(Routes.RESET) }
+                )
+            }
+            composable(Routes.REGISTER) {
+                RegisterScreen(
+                    onBack = { nav.popBackStack() },
+                    onRegistered = { nav.popBackStack(Routes.MAP, inclusive = false) }
+                )
+            }
+            composable(Routes.RESET) {
+                ResetScreen(
+                    onBack = { nav.popBackStack() },
+                    onDone = { nav.popBackStack(Routes.LOGIN, inclusive = false) }
+                )
+            }
+
+            composable(
+                Routes.STATION,
+                arguments = listOf(navArgument(Routes.ARG_STATION_ID) { type = NavType.LongType })
+            ) { entry ->
+                val id = entry.arguments?.getLong(Routes.ARG_STATION_ID) ?: 0L
+                StationScreen(
+                    stationId = id,
+                    onBack = { nav.popBackStack() },
+                    onMark = { stationId ->
+                        if (isLoggedIn) nav.navigate(Routes.mark(stationId)) else nav.navigate(Routes.LOGIN)
+                    }
+                )
+            }
+            composable(
+                Routes.MARK,
+                arguments = listOf(navArgument(Routes.ARG_STATION_ID) { type = NavType.LongType })
+            ) { entry ->
+                val id = entry.arguments?.getLong(Routes.ARG_STATION_ID) ?: 0L
+                MarkScreen(stationId = id, onBack = { nav.popBackStack() })
+            }
+
+            composable(Routes.ADMIN_REGIONS) { AdminRegionsScreen(onBack = { nav.popBackStack() }) }
+            composable(Routes.ADMIN_ADD_STATION) { AdminAddStationScreen(onBack = { nav.popBackStack() }) }
+            composable(Routes.ADMIN_MODERATION) { AdminModerationScreen(onBack = { nav.popBackStack() }) }
+            composable(
+                Routes.ADMIN_USER,
+                arguments = listOf(navArgument(Routes.ARG_USER_ID) { type = NavType.LongType })
+            ) { entry ->
+                val id = entry.arguments?.getLong(Routes.ARG_USER_ID) ?: 0L
+                AdminUserScreen(userId = id, onBack = { nav.popBackStack() })
+            }
         }
     }
 }

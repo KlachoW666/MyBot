@@ -18,7 +18,12 @@ fun CreationExtras.app(): FuelMapApplication =
 object AppViewModelProvider {
     val Factory = viewModelFactory {
         initializer { AuthViewModel(app().container.authRepository) }
-        initializer { MapViewModel(app().container.stationRepository) }
+        initializer {
+            MapViewModel(
+                app().container.stationRepository,
+                app().container.authRepository
+            )
+        }
         initializer {
             StationViewModel(
                 app().container.stationRepository,

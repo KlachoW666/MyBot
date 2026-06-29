@@ -77,12 +77,24 @@ interface StationDao {
     suspend fun getById(id: Long): GasStationEntity?
 
     @Transaction
-    @Query("SELECT * FROM gas_stations")
+    @Query("SELECT * FROM gas_stations WHERE status = 'APPROVED'")
     fun observeAllWithCurrent(): Flow<List<StationWithCurrentMark>>
 
     @Transaction
     @Query("SELECT * FROM gas_stations WHERE id = :id")
     fun observeWithCurrent(id: Long): Flow<StationWithCurrentMark?>
+
+    @Query("SELECT * FROM gas_stations WHERE status = 'PENDING' ORDER BY id DESC")
+    fun observePending(): Flow<List<GasStationEntity>>
+
+    @Query("SELECT COUNT(*) FROM gas_stations WHERE status = 'PENDING'")
+    fun observePendingCount(): Flow<Int>
+
+    @Query("UPDATE gas_stations SET status = 'APPROVED' WHERE id = :id")
+    suspend fun approve(id: Long)
+
+    @Query("DELETE FROM gas_stations WHERE id = :id")
+    suspend fun deleteStation(id: Long)
 }
 
 @Dao

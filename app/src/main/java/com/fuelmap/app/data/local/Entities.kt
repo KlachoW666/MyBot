@@ -8,6 +8,7 @@ import com.fuelmap.app.domain.model.ConfirmationType
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.Queue
 import com.fuelmap.app.domain.model.Role
+import com.fuelmap.app.domain.model.StationStatus
 
 @Entity(
     tableName = "users",
@@ -63,7 +64,9 @@ data class GasStationEntity(
     val lat: Double,
     val lng: Double,
     val address: String,
-    val regionId: Long
+    val regionId: Long,
+    val status: StationStatus = StationStatus.APPROVED,
+    val addedByUserId: Long? = null
 )
 
 @Entity(

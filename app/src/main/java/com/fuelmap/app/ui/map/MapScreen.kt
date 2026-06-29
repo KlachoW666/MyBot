@@ -1,30 +1,36 @@
 package com.fuelmap.app.ui.map
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,10 +42,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.fuelmap.app.util.LocationProvider
-import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -48,37 +53,49 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
-import com.fuelmap.app.ui.common.SupportFooter
+import com.fuelmap.app.util.LocationProvider
 import com.fuelmap.app.util.MarkerIcons
+import com.fuelmap.app.util.TimeFormat
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
+import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.InputListener
+import com.yandex.mapkit.map.Map as YMap
 import com.yandex.mapkit.map.MapObjectTapListener
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    isLoggedIn: Boolean,
-    isAdmin: Boolean,
-    onStationClick: (Long) -> Unit,
-    onLoginClick: () -> Unit,
-    onProfileClick: () -> Unit,
-    onAdminClick: () -> Unit,
+    onStationDetails: (Long) -> Unit,
+    onMark: (Long) -> Unit,
     vm: MapViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val markers by vm.markers.collectAsStateWithLifecycle()
     val filter by vm.fuelFilter.collectAsStateWithLifecycle()
+    val message by vm.message.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
     var focusPoint by remember { mutableStateOf<Point?>(null) }
+    var userPoint by remember { mutableStateOf<Point?>(null) }
+    var selectedStationId by remember { mutableStateOf<Long?>(null) }
+    var addPoint by remember { mutableStateOf<Point?>(null) }
 
     fun locate() {
         scope.launch {
-            LocationProvider.currentLocation(context)?.let {
-                focusPoint = Point(it.latitude, it.longitude)
+            val loc = LocationProvider.currentLocation(context)
+            if (loc != null) {
+                val p = Point(loc.latitude, loc.longitude)
+                userPoint = p
+                focusPoint = p
+            } else {
+                snackbar.showSnackbar("Не удалось определить геолокацию")
             }
         }
     }
@@ -91,33 +108,26 @@ fun MapScreen(
         else locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    Scaffold(topBar = {
-        CenterAlignedTopAppBar(
-            title = {
-                Text(
-                    "Russia Oil",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            actions = {
-                if (isAdmin) {
-                    IconButton(onClick = onAdminClick) {
-                        Icon(Icons.Filled.AdminPanelSettings, contentDescription = "Админка")
-                    }
+    LaunchedEffect(message) {
+        message?.let { snackbar.showSnackbar(it); vm.clearMessage() }
+    }
+
+    val selected = markers.firstOrNull { it.station.station.id == selectedStationId }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Russia Oil",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleLarge
+                    )
                 }
-                if (isLoggedIn) {
-                    IconButton(onClick = onProfileClick) {
-                        Icon(Icons.Filled.Person, contentDescription = "Профиль")
-                    }
-                } else {
-                    IconButton(onClick = onLoginClick) {
-                        Icon(Icons.Filled.Login, contentDescription = "Войти")
-                    }
-                }
-            }
-        )
-    }) { padding ->
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
         Box(
             Modifier
                 .fillMaxSize()
@@ -125,24 +135,19 @@ fun MapScreen(
         ) {
             YandexMap(
                 markers = markers,
+                userPoint = userPoint,
                 focusPoint = focusPoint,
-                onStationTap = onStationClick,
+                initialCamera = vm.lastCamera,
+                onCameraIdle = { vm.lastCamera = it },
+                onStationTap = { selectedStationId = it },
+                onLongTap = { addPoint = it },
                 modifier = Modifier.fillMaxSize()
             )
 
-            FloatingActionButton(
-                onClick = { onLocateClick() },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
-                Icon(Icons.Filled.MyLocation, contentDescription = "Моя геолокация")
-            }
-
-            // Фильтр по типу топлива
             Surface(
                 tonalElevation = 3.dp,
                 shadowElevation = 3.dp,
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(8.dp)
@@ -171,16 +176,120 @@ fun MapScreen(
 
             Surface(
                 tonalElevation = 2.dp,
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(8.dp)
             ) {
-                Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                     Text(
                         "🟢 свежее · 🟡 устаревает · ⚪ нет данных · 🔴 нет топлива",
                         style = MaterialTheme.typography.labelSmall
                     )
-                    SupportFooter(modifier = Modifier.padding(top = 2.dp))
+                    Text(
+                        "Удерживайте точку на карте, чтобы добавить АЗС",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            FloatingActionButton(
+                onClick = { onLocateClick() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(Icons.Filled.MyLocation, contentDescription = "Моя геолокация")
+            }
+        }
+    }
+
+    if (selected != null) {
+        StationInfoSheet(
+            marker = selected,
+            onDismiss = { selectedStationId = null },
+            onMark = { selectedStationId = null; onMark(it) },
+            onDetails = { selectedStationId = null; onStationDetails(it) }
+        )
+    }
+
+    addPoint?.let { p ->
+        AddStationDialog(
+            onDismiss = { addPoint = null },
+            onConfirm = { name, brand ->
+                vm.addStationAt(name, brand, p.latitude, p.longitude)
+                addPoint = null
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StationInfoSheet(
+    marker: StationMarker,
+    onDismiss: () -> Unit,
+    onMark: (Long) -> Unit,
+    onDetails: (Long) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    val station = marker.station.station
+    val mark = marker.station.currentMark
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(station.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            if (station.brand.isNotBlank()) Text(station.brand, style = MaterialTheme.typography.bodyMedium)
+            if (station.address.isNotBlank()) {
+                Text(station.address, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Text(statusTitle(marker.freshness), style = MaterialTheme.typography.titleMedium)
+
+            if (mark == null) {
+                Text("Данных по топливу пока нет. Будьте первым!",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                HorizontalDivider()
+                mark.items.forEach { item ->
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(item.type.title)
+                        Text(
+                            if (item.available) "есть · %.2f ₽".format(item.price) else "нет",
+                            color = if (item.available) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                Text(
+                    "Обновлено: ${TimeFormat.ago(mark.mark.createdAt)} · очередь: ${mark.mark.queue.title}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(onClick = { onDetails(station.id) }, modifier = Modifier.weight(1f)) {
+                    Text("Подробнее")
+                }
+                Button(onClick = { onMark(station.id) }, modifier = Modifier.weight(1f)) {
+                    Text("Отметить наличие")
                 }
             }
         }
@@ -188,22 +297,75 @@ fun MapScreen(
 }
 
 @Composable
+private fun AddStationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, brand: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var brand by remember { mutableStateOf("") }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Новая АЗС") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Метка будет привязана к выбранной точке. Заявки обычных пользователей отправляются на модерацию.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    label = { Text("Название") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = brand, onValueChange = { brand = it },
+                    label = { Text("Бренд (необязательно)") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { onConfirm(name, brand) },
+                enabled = name.isNotBlank()
+            ) { Text("Добавить") }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Отмена") }
+        }
+    )
+}
+
+private fun statusTitle(f: MarkFreshness): String = when (f) {
+    MarkFreshness.FRESH -> "🟢 Топливо есть (свежие данные)"
+    MarkFreshness.AGING -> "🟡 Топливо есть (данные устаревают)"
+    MarkFreshness.STALE -> "⚪ Нет актуальных данных"
+    MarkFreshness.NO_FUEL -> "🔴 Топлива нет"
+}
+
+@Composable
 private fun YandexMap(
     markers: List<StationMarker>,
+    userPoint: Point?,
     focusPoint: Point?,
+    initialCamera: CameraState?,
+    onCameraIdle: (CameraState) -> Unit,
     onStationTap: (Long) -> Unit,
+    onLongTap: (Point) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
+    val map = remember { mapView.mapWindow.map }
+    val stationsCollection = remember { map.mapObjects.addCollection() }
+    val userCollection = remember { map.mapObjects.addCollection() }
 
-    // Иконки маркеров кэшируются (всего 4 варианта) — не создаём bitmap на каждую АЗС.
     val markerIcons = remember {
         MarkFreshness.entries.associateWith { ImageProvider.fromBitmap(MarkerIcons.bitmap(it)) }
     }
-
-    // Держим сильные ссылки на тап-листенеры: MapKit хранит их как weak references.
+    val userIcon = remember { ImageProvider.fromBitmap(MarkerIcons.userBitmap()) }
     val tapListeners = remember { mutableListOf<MapObjectTapListener>() }
 
     DisposableEffect(lifecycleOwner) {
@@ -224,32 +386,54 @@ private fun YandexMap(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Начальное положение камеры — Московская область.
-    LaunchedEffect(Unit) {
-        mapView.mapWindow.map.move(
-            CameraPosition(Point(55.75, 37.62), 9.0f, 0.0f, 0.0f)
-        )
+    val inputListener = remember {
+        object : InputListener {
+            override fun onMapTap(m: YMap, p: Point) {}
+            override fun onMapLongTap(m: YMap, p: Point) { onLongTap(p) }
+        }
     }
-
-    // Переход к местоположению пользователя по кнопке.
-    LaunchedEffect(focusPoint) {
-        focusPoint?.let {
-            mapView.mapWindow.map.move(CameraPosition(it, 15.0f, 0.0f, 0.0f))
+    val cameraListener = remember {
+        CameraListener { _, pos, _, finished ->
+            if (finished) onCameraIdle(CameraState(pos.target.latitude, pos.target.longitude, pos.zoom))
+        }
+    }
+    DisposableEffect(Unit) {
+        map.addInputListener(inputListener)
+        map.addCameraListener(cameraListener)
+        onDispose {
+            map.removeInputListener(inputListener)
+            map.removeCameraListener(cameraListener)
         }
     }
 
-    // Перерисовка маркеров при изменении данных.
+    LaunchedEffect(Unit) {
+        val target = initialCamera?.let { Point(it.lat, it.lng) } ?: Point(55.75, 37.62)
+        val zoom = initialCamera?.zoom ?: 9.0f
+        map.move(CameraPosition(target, zoom, 0.0f, 0.0f))
+    }
+
+    LaunchedEffect(focusPoint) {
+        focusPoint?.let { map.move(CameraPosition(it, 15.0f, 0.0f, 0.0f)) }
+    }
+
+    LaunchedEffect(userPoint) {
+        userCollection.clear()
+        userPoint?.let {
+            userCollection.addPlacemark().apply {
+                geometry = it
+                setIcon(userIcon)
+            }
+        }
+    }
+
     LaunchedEffect(markers) {
-        val map = mapView.mapWindow.map
-        map.mapObjects.clear()
+        stationsCollection.clear()
         tapListeners.clear()
         markers.forEach { marker ->
-            val point = Point(marker.station.station.lat, marker.station.station.lng)
-            val placemark = map.mapObjects.addPlacemark()
-            placemark.geometry = point
+            val placemark = stationsCollection.addPlacemark()
+            placemark.geometry = Point(marker.station.station.lat, marker.station.station.lng)
             markerIcons[marker.freshness]?.let { placemark.setIcon(it) }
             val stationId = marker.station.station.id
-            placemark.userData = stationId
             val listener = MapObjectTapListener { _, _ ->
                 onStationTap(stationId)
                 true
