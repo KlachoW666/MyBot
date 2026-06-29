@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.SupportFooter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +97,7 @@ fun LoginScreen(
             TextButton(onClick = onReset, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Text("Забыли пароль?")
             }
+            SupportFooter(modifier = Modifier.align(Alignment.CenterHorizontally))
         }
     }
 }

@@ -26,15 +26,20 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,6 +49,9 @@ import com.fuelmap.app.data.repository.FuelEntry
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.Queue
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.SupportFooter
+import com.fuelmap.app.util.LocationProvider
+import kotlinx.coroutines.launch
 
 private data class FuelInput(var available: Boolean = true, var price: String = "")
 
@@ -59,6 +67,30 @@ fun MarkScreen(
 
     val selected = remember { mutableStateMapOf<FuelType, FuelInput>() }
     var queue by remember { mutableStateOf(Queue.NONE) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    fun buildEntries(): List<FuelEntry> = selected.map { (type, input) ->
+        FuelEntry(type, input.available, input.price.replace(',', '.').toDoubleOrNull() ?: 0.0)
+    }
+
+    suspend fun submitWithLocation() {
+        val loc = LocationProvider.currentLocation(context)
+        vm.submitMark(stationId, buildEntries(), queue, loc?.latitude, loc?.longitude, onDone = onBack)
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) scope.launch { submitWithLocation() }
+        else vm.showMessage("Для отметки нужен доступ к геолокации — это защищает карту от ложных меток.")
+    }
+
+    fun attemptSubmit() {
+        if (LocationProvider.hasPermission(context)) scope.launch { submitWithLocation() }
+        else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
 
     LaunchedEffect(message) {
         message?.let {
@@ -139,21 +171,19 @@ fun MarkScreen(
                 }
             }
 
+            Text(
+                "При сохранении приложение проверит вашу геолокацию: отметку можно ставить только находясь рядом с этой АЗС.",
+                style = MaterialTheme.typography.labelMedium
+            )
+
             Button(
-                onClick = {
-                    val entries = selected.map { (type, input) ->
-                        FuelEntry(
-                            type = type,
-                            available = input.available,
-                            price = input.price.replace(',', '.').toDoubleOrNull() ?: 0.0
-                        )
-                    }
-                    vm.submitMark(stationId, entries, queue, onDone = onBack)
-                },
+                onClick = { attemptSubmit() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Сохранить отметку")
             }
+
+            SupportFooter(modifier = Modifier.padding(top = 4.dp))
         }
     }
 }

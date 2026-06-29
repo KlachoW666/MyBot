@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.Role
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.MarkHistoryRow
+import com.fuelmap.app.ui.common.SupportFooter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +93,7 @@ fun ProfileScreen(
             } else {
                 items(history) { mark -> MarkHistoryRow(mark) }
             }
+            item { SupportFooter() }
         }
     }
 }

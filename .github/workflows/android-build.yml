@@ -48,12 +48,12 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p artifacts
-          cp app/build/outputs/apk/debug/app-debug.apk "artifacts/FuelMap-debug-${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "artifacts/RussiaOil-debug-${{ github.run_number }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FuelMap-debug-apk
+          name: RussiaOil-debug-apk
           path: artifacts/*.apk
           if-no-files-found: error
 
@@ -62,13 +62,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: FuelMap debug build #${{ github.run_number }}
+          name: Russia Oil debug build #${{ github.run_number }}
           body: |
-            Автоматическая debug-сборка приложения «Карта топлива».
+            Автоматическая debug-сборка приложения «Russia Oil».
 
-            Установите `FuelMap-debug-*.apk` на Android-устройство (Android 7.0+, минимум API 24).
+            Установите `RussiaOil-debug-*.apk` на Android-устройство (Android 8.0+, минимум API 26).
             Разрешите установку из неизвестных источников.
 
             Вшитый супер-администратор: логин `sputnik`.
+            Техподдержка и Telegram-канал: @oilfor
           files: artifacts/*.apk
           generate_release_notes: false

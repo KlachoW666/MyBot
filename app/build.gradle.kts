@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.fuelmap.app"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -87,6 +87,9 @@ dependencies {
 
     // Yandex MapKit (lite — отображение карты + объекты)
     implementation("com.yandex.android:maps.mobile:4.39.1-lite")
+
+    // Геолокация (проверка близости пользователя к АЗС при отметке)
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     testImplementation("junit:junit:4.13.2")
 }

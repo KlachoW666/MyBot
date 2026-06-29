@@ -1,6 +1,7 @@
 package com.fuelmap.app.ui.map
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -36,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.SupportFooter
 import com.fuelmap.app.util.MarkerIcons
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -60,7 +62,7 @@ fun MapScreen(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Карта топлива") },
+            title = { Text("Russia Oil") },
             actions = {
                 if (isAdmin) {
                     IconButton(onClick = onAdminClick) {
@@ -126,11 +128,13 @@ fun MapScreen(
                     .align(Alignment.BottomStart)
                     .padding(8.dp)
             ) {
-                Text(
-                    "🟢 свежее · 🟡 устаревает · ⚪ нет данных · 🔴 нет топлива",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text(
+                        "🟢 свежее · 🟡 устаревает · ⚪ нет данных · 🔴 нет топлива",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    SupportFooter(modifier = Modifier.padding(top = 2.dp))
+                }
             }
         }
     }
