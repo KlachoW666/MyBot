@@ -1,0 +1,4 @@
+<resources>
+    <!-- Базовая тема приложения. UI рисуется Compose (Material3), системная тема — без ActionBar. -->
+    <style name="Theme.FuelMap" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
