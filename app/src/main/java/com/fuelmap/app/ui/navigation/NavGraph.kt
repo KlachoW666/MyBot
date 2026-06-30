@@ -1,20 +1,30 @@
 package com.fuelmap.app.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -59,22 +69,28 @@ fun NavGraph(currentUser: UserEntity?) {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    tabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = route == tab.route,
-                            onClick = {
-                                if (route != tab.route) {
-                                    nav.navigate(tab.route) {
-                                        popUpTo(Routes.MAP) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shadowElevation = 10.dp,
+                    shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+                ) {
+                    NavigationBar(containerColor = Color.Transparent) {
+                        tabs.forEach { tab ->
+                            NavigationBarItem(
+                                selected = route == tab.route,
+                                onClick = {
+                                    if (route != tab.route) {
+                                        nav.navigate(tab.route) {
+                                            popUpTo(Routes.MAP) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
                                     }
-                                }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) }
-                        )
+                                },
+                                icon = { Icon(tab.icon, contentDescription = tab.label) },
+                                label = { Text(tab.label) }
+                            )
+                        }
                     }
                 }
             }
@@ -83,7 +99,11 @@ fun NavGraph(currentUser: UserEntity?) {
         NavHost(
             navController = nav,
             startDestination = Routes.MAP,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn(tween(220)) + scaleIn(initialScale = 0.96f, animationSpec = tween(220)) },
+            exitTransition = { fadeOut(tween(160)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(160)) + scaleOut(targetScale = 0.96f, animationSpec = tween(160)) }
         ) {
             composable(Routes.MAP) {
                 MapScreen(

@@ -16,9 +16,16 @@ class SessionManager(private val context: Context) {
 
     private val userIdKey = longPreferencesKey("current_user_id")
     private val osmImportedKey = booleanPreferencesKey("osm_imported")
+    private val onboardingDoneKey = booleanPreferencesKey("onboarding_done")
 
     val currentUserId: Flow<Long?> = context.dataStore.data.map { prefs ->
         prefs[userIdKey]?.takeIf { it > 0 }
+    }
+
+    val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[onboardingDoneKey] ?: false }
+
+    suspend fun setOnboardingDone() {
+        context.dataStore.edit { it[onboardingDoneKey] = true }
     }
 
     suspend fun isOsmImported(): Boolean =

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.Role
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.BrandHeader
+import com.fuelmap.app.ui.common.EmptyState
 import com.fuelmap.app.ui.common.MarkHistoryRow
 import com.fuelmap.app.ui.common.SupportFooter
 
@@ -106,7 +108,13 @@ fun ProfileScreen(
             }
             item { Text("Мои отметки", style = MaterialTheme.typography.titleMedium) }
             if (history.isEmpty()) {
-                item { Text("Пока нет отметок.") }
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.LocalGasStation,
+                        title = "Пока нет отметок",
+                        subtitle = "Отметьте наличие топлива на ближайшей АЗС — история появится здесь."
+                    )
+                }
             } else {
                 items(history) { mark -> MarkHistoryRow(mark) }
             }

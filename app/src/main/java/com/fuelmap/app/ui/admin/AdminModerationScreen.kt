@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -70,9 +71,10 @@ fun AdminModerationScreen(
         ) {
             if (pending.isEmpty()) {
                 item {
-                    Text(
-                        "Нет АЗС на модерации. Заявки пользователей появятся здесь.",
-                        style = MaterialTheme.typography.bodyMedium
+                    com.fuelmap.app.ui.common.EmptyState(
+                        icon = Icons.Filled.FactCheck,
+                        title = "Заявок нет",
+                        subtitle = "Когда пользователи добавят новые АЗС, они появятся здесь для подтверждения."
                     )
                 }
             }
