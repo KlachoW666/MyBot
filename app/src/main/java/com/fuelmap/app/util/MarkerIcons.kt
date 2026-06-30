@@ -4,7 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
 import com.fuelmap.app.domain.model.MarkFreshness
+import kotlin.math.ceil
 
 /**
  * Программно рисует круглые маркеры АЗС нужного цвета (без необходимости в PNG-ресурсах).
@@ -40,6 +44,72 @@ object MarkerIcons {
         canvas.drawCircle(r, r, r, halo)
         canvas.drawCircle(r, r, sizePx * 0.22f, dot)
         canvas.drawCircle(r, r, sizePx * 0.22f, border)
+        return bmp
+    }
+
+    /**
+     * Плашка-карточка над АЗС (видна при приближении): строки с топливом и ценой,
+     * цветная полоса по свежести и «хвостик» снизу. Якорь — низ по центру.
+     */
+    fun labelBitmap(lines: List<String>, accent: Int): Bitmap {
+        val textSize = 34f
+        val padH = 22f
+        val padV = 16f
+        val lineGap = 10f
+        val stripeW = 12f
+        val pointer = 18f
+        val radius = 22f
+
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(0x20, 0x24, 0x28)
+            this.textSize = textSize
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        val lineH = textSize + lineGap
+        val textBlockH = lines.size * lineH - lineGap
+        val maxTextW = lines.maxOfOrNull { textPaint.measureText(it) } ?: 0f
+
+        val cardW = 8f + stripeW + padH + maxTextW + padH
+        val cardH = padV + textBlockH + padV
+        val w = ceil(cardW + 4f).toInt()
+        val h = ceil(cardH + pointer + 4f).toInt()
+
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+
+        val cx = cardW / 2f
+        // хвостик
+        val pointerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+        val pointerPath = Path().apply {
+            moveTo(cx - 12f, cardH - 1f)
+            lineTo(cx + 12f, cardH - 1f)
+            lineTo(cx, cardH + pointer)
+            close()
+        }
+        canvas.drawPath(pointerPath, pointerPaint)
+
+        val rect = RectF(2f, 2f, cardW - 2f, cardH - 2f)
+        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = accent
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        canvas.drawRoundRect(rect, radius, radius, bgPaint)
+        canvas.drawRoundRect(rect, radius, radius, borderPaint)
+
+        val stripePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent }
+        canvas.drawRoundRect(
+            RectF(rect.left + 8f, rect.top + 10f, rect.left + 8f + stripeW, rect.bottom - 10f),
+            6f, 6f, stripePaint
+        )
+
+        val textX = rect.left + 8f + stripeW + padH
+        var y = rect.top + padV + textSize - 6f
+        for (line in lines) {
+            canvas.drawText(line, textX, y, textPaint)
+            y += lineH
+        }
         return bmp
     }
 

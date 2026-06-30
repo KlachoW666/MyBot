@@ -58,8 +58,10 @@ import com.fuelmap.app.util.MarkerIcons
 import com.fuelmap.app.util.TimeFormat
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
+import android.graphics.PointF
 import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.InputListener
 import com.yandex.mapkit.map.Map as YMap
 import com.yandex.mapkit.map.MapObjectTapListener
@@ -367,6 +369,7 @@ private fun YandexMap(
     }
     val userIcon = remember { ImageProvider.fromBitmap(MarkerIcons.userBitmap()) }
     val tapListeners = remember { mutableListOf<MapObjectTapListener>() }
+    val showLabels = remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -394,7 +397,11 @@ private fun YandexMap(
     }
     val cameraListener = remember {
         CameraListener { _, pos, _, finished ->
-            if (finished) onCameraIdle(CameraState(pos.target.latitude, pos.target.longitude, pos.zoom))
+            if (finished) {
+                onCameraIdle(CameraState(pos.target.latitude, pos.target.longitude, pos.zoom))
+                val zoomedIn = pos.zoom >= LABEL_ZOOM
+                if (zoomedIn != showLabels.value) showLabels.value = zoomedIn
+            }
         }
     }
     DisposableEffect(Unit) {
@@ -426,13 +433,28 @@ private fun YandexMap(
         }
     }
 
-    LaunchedEffect(markers) {
+    LaunchedEffect(markers, showLabels.value) {
         stationsCollection.clear()
         tapListeners.clear()
         markers.forEach { marker ->
             val placemark = stationsCollection.addPlacemark()
             placemark.geometry = Point(marker.station.station.lat, marker.station.station.lng)
-            markerIcons[marker.freshness]?.let { placemark.setIcon(it) }
+
+            val currentMark = marker.station.currentMark
+            if (showLabels.value && currentMark != null) {
+                val available = currentMark.items.filter { it.available }
+                val lines = if (available.isEmpty()) listOf("Нет топлива")
+                else available.take(3).map { "${it.type.title}  ${formatPrice(it.price)} ₽" }
+                placemark.setIcon(
+                    ImageProvider.fromBitmap(
+                        MarkerIcons.labelBitmap(lines, MarkerIcons.colorFor(marker.freshness))
+                    )
+                )
+                placemark.setIconStyle(IconStyle().setAnchor(PointF(0.5f, 1.0f)).setScale(0.5f))
+            } else {
+                markerIcons[marker.freshness]?.let { placemark.setIcon(it) }
+            }
+
             val stationId = marker.station.station.id
             val listener = MapObjectTapListener { _, _ ->
                 onStationTap(stationId)
@@ -445,3 +467,8 @@ private fun YandexMap(
 
     AndroidView(factory = { mapView }, modifier = modifier)
 }
+
+private const val LABEL_ZOOM = 14.5f
+
+private fun formatPrice(p: Double): String =
+    if (p % 1.0 == 0.0) p.toInt().toString() else "%.1f".format(p)

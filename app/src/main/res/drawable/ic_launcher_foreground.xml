@@ -1,14 +1,41 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Капля топлива -->
+
+    <!-- Тело пин-метки (белое с лёгким градиентом) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,30 C54,30 38,54 38,67 a16,16 0 1,0 32,0 C70,54 54,30 54,30 z" />
-    <!-- Блик -->
+        android:pathData="M54,22 C40.7,22 30,32.7 30,46 C30,62 54,88 54,88 C54,88 78,62 78,46 C78,32.7 67.3,22 54,22 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54" android:startY="22"
+                android:endX="54" android:endY="88">
+                <item android:offset="0" android:color="#FFFFFFFF" />
+                <item android:offset="1" android:color="#FFE3EEFC" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Капля топлива внутри (синий градиент) -->
     <path
-        android:fillColor="#C8E6C9"
-        android:pathData="M50,60 a6,9 0 1,0 1,0 z" />
+        android:pathData="M54,33 C54,33 45,45 45,52 a9,9 0 1,0 18,0 C63,45 54,33 54,33 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54" android:startY="33"
+                android:endX="54" android:endY="62">
+                <item android:offset="0" android:color="#FF36A4F4" />
+                <item android:offset="1" android:color="#FF1565C0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Блик на капле -->
+    <path
+        android:pathData="M50,48 a3,4.5 0 1,0 0.1,0 z"
+        android:fillColor="#FFFFFFFF"
+        android:fillAlpha="0.55" />
 </vector>
