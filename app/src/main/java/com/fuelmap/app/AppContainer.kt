@@ -4,6 +4,7 @@ import android.content.Context
 import com.fuelmap.app.data.local.AppDatabase
 import com.fuelmap.app.data.repository.AdminRepository
 import com.fuelmap.app.data.repository.AuthRepository
+import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.MarkRepository
 import com.fuelmap.app.data.repository.StationRepository
 import com.fuelmap.app.data.session.SessionManager
@@ -17,6 +18,7 @@ class AppContainer(context: Context) {
     val stationRepository = StationRepository(db.stationDao(), db.regionDao())
     val markRepository = MarkRepository(db.markDao(), db.confirmationDao(), db.userDao())
     val adminRepository = AdminRepository(db.userDao())
+    val favoriteRepository = FavoriteRepository(db.favoriteDao())
 
     val database get() = db
 }

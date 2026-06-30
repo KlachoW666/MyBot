@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,7 @@ import com.fuelmap.app.ui.auth.RegisterScreen
 import com.fuelmap.app.ui.auth.ResetScreen
 import com.fuelmap.app.ui.leaderboard.LeaderboardScreen
 import com.fuelmap.app.ui.map.MapScreen
+import com.fuelmap.app.ui.nearby.NearbyScreen
 import com.fuelmap.app.ui.profile.ProfileScreen
 import com.fuelmap.app.ui.station.MarkScreen
 import com.fuelmap.app.ui.station.StationScreen
@@ -60,6 +62,7 @@ fun NavGraph(currentUser: UserEntity?) {
 
     val tabs = buildList {
         add(Tab(Routes.MAP, "Карта", Icons.Filled.Map))
+        add(Tab(Routes.NEARBY, "Рядом", Icons.Filled.NearMe))
         add(Tab(Routes.LEADERBOARD, "Лидеры", Icons.Filled.Leaderboard))
         add(Tab(Routes.PROFILE, "Профиль", Icons.Filled.Person))
         if (isAdmin) add(Tab(Routes.ADMIN, "Админ", Icons.Filled.AdminPanelSettings))
@@ -120,6 +123,10 @@ fun NavGraph(currentUser: UserEntity?) {
                         if (isLoggedIn) nav.navigate(Routes.mark(stationId)) else nav.navigate(Routes.LOGIN)
                     }
                 )
+            }
+
+            composable(Routes.NEARBY) {
+                NearbyScreen(onStationDetails = { nav.navigate(Routes.station(it)) })
             }
 
             composable(Routes.LEADERBOARD) { LeaderboardScreen() }

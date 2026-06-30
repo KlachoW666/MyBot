@@ -6,15 +6,19 @@ import com.fuelmap.app.data.local.RegionEntity
 import com.fuelmap.app.data.local.StationWithCurrentMark
 import com.fuelmap.app.data.local.UserEntity
 import com.fuelmap.app.data.repository.AuthRepository
+import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.StationRepository
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.domain.model.StationStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -28,7 +32,8 @@ data class CameraState(val lat: Double, val lng: Double, val zoom: Float)
 
 class MapViewModel(
     private val repo: StationRepository,
-    private val authRepo: AuthRepository
+    private val authRepo: AuthRepository,
+    private val favoriteRepo: FavoriteRepository
 ) : ViewModel() {
 
     /** Активный фильтр по типу топлива (null = показывать все). */
@@ -36,6 +41,21 @@ class MapViewModel(
 
     val currentUser: StateFlow<UserEntity?> =
         authRepo.currentUser.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val favorites: StateFlow<Set<Long>> =
+        authRepo.currentUser.flatMapLatest { u ->
+            if (u == null) flowOf(emptySet()) else favoriteRepo.favorites(u.id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    fun toggleFavorite(stationId: Long) {
+        val user = currentUser.value
+        if (user == null) {
+            _message.value = "Войдите, чтобы добавлять в избранное"
+            return
+        }
+        viewModelScope.launch { favoriteRepo.toggle(user.id, stationId) }
+    }
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()

@@ -113,6 +113,16 @@ data class FuelMarkItemEntity(
 )
 
 @Entity(
+    tableName = "favorites",
+    indices = [Index(value = ["userId", "stationId"], unique = true)]
+)
+data class FavoriteEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Long,
+    val stationId: Long
+)
+
+@Entity(
     tableName = "confirmations",
     indices = [Index("markId"), Index(value = ["markId", "userId"], unique = true)]
 )

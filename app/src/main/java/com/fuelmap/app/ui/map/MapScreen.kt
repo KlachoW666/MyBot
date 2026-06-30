@@ -14,14 +14,19 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -55,6 +60,7 @@ import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.util.LocationProvider
 import com.fuelmap.app.util.MarkerIcons
+import com.fuelmap.app.util.NavigationLauncher
 import com.fuelmap.app.util.TimeFormat
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -79,6 +85,7 @@ fun MapScreen(
     val markers by vm.markers.collectAsStateWithLifecycle()
     val filter by vm.fuelFilter.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
+    val favorites by vm.favorites.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
     val context = LocalContext.current
@@ -210,6 +217,16 @@ fun MapScreen(
     if (selected != null) {
         StationInfoSheet(
             marker = selected,
+            isFavorite = favorites.contains(selected.station.station.id),
+            onFavorite = { vm.toggleFavorite(selected.station.station.id) },
+            onRoute = {
+                NavigationLauncher.route(
+                    context,
+                    selected.station.station.lat,
+                    selected.station.station.lng,
+                    selected.station.station.name
+                )
+            },
             onDismiss = { selectedStationId = null },
             onMark = { selectedStationId = null; onMark(it) },
             onDetails = { selectedStationId = null; onStationDetails(it) }
@@ -231,6 +248,9 @@ fun MapScreen(
 @Composable
 private fun StationInfoSheet(
     marker: StationMarker,
+    isFavorite: Boolean,
+    onFavorite: () -> Unit,
+    onRoute: () -> Unit,
     onDismiss: () -> Unit,
     onMark: (Long) -> Unit,
     onDetails: (Long) -> Unit
@@ -248,8 +268,19 @@ private fun StationInfoSheet(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(station.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            if (station.brand.isNotBlank()) Text(station.brand, style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(station.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (station.brand.isNotBlank()) Text(station.brand, style = MaterialTheme.typography.bodyMedium)
+                }
+                IconButton(onClick = onFavorite) {
+                    Icon(
+                        if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = "В избранное",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             if (station.address.isNotBlank()) {
                 Text(station.address, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -283,8 +314,12 @@ private fun StationInfoSheet(
                 )
             }
 
+            FilledTonalButton(onClick = onRoute, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Icon(Icons.Filled.NearMe, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                Text("Поехали")
+            }
             Row(
-                Modifier.fillMaxWidth().padding(top = 8.dp),
+                Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(onClick = { onDetails(station.id) }, modifier = Modifier.weight(1f)) {

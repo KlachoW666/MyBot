@@ -90,6 +90,9 @@ interface StationDao {
     @Query("SELECT COUNT(*) FROM gas_stations WHERE status = 'PENDING'")
     fun observePendingCount(): Flow<Int>
 
+    @Query("SELECT DISTINCT brand FROM gas_stations WHERE status = 'APPROVED' AND brand != '' ORDER BY brand")
+    fun observeBrands(): Flow<List<String>>
+
     @Query("UPDATE gas_stations SET status = 'APPROVED' WHERE id = :id")
     suspend fun approve(id: Long)
 
@@ -132,6 +135,21 @@ interface MarkDao {
         insertItems(items.map { it.copy(markId = markId) })
         return markId
     }
+}
+
+@Dao
+interface FavoriteDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun add(favorite: FavoriteEntity)
+
+    @Query("DELETE FROM favorites WHERE userId = :userId AND stationId = :stationId")
+    suspend fun remove(userId: Long, stationId: Long)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE userId = :userId AND stationId = :stationId)")
+    suspend fun isFavorite(userId: Long, stationId: Long): Boolean
+
+    @Query("SELECT stationId FROM favorites WHERE userId = :userId")
+    fun observeStationIds(userId: Long): Flow<List<Long>>
 }
 
 @Dao

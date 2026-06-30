@@ -9,6 +9,7 @@ import com.fuelmap.app.ui.admin.AdminViewModel
 import com.fuelmap.app.ui.auth.AuthViewModel
 import com.fuelmap.app.ui.leaderboard.LeaderboardViewModel
 import com.fuelmap.app.ui.map.MapViewModel
+import com.fuelmap.app.ui.nearby.NearbyViewModel
 import com.fuelmap.app.ui.profile.ProfileViewModel
 import com.fuelmap.app.ui.station.StationViewModel
 
@@ -21,20 +22,29 @@ object AppViewModelProvider {
         initializer {
             MapViewModel(
                 app().container.stationRepository,
-                app().container.authRepository
+                app().container.authRepository,
+                app().container.favoriteRepository
             )
         }
         initializer {
             StationViewModel(
                 app().container.stationRepository,
                 app().container.markRepository,
-                app().container.authRepository
+                app().container.authRepository,
+                app().container.favoriteRepository
             )
         }
         initializer {
             ProfileViewModel(
                 app().container.authRepository,
                 app().container.markRepository
+            )
+        }
+        initializer {
+            NearbyViewModel(
+                app().container.stationRepository,
+                app().container.favoriteRepository,
+                app().container.authRepository
             )
         }
         initializer {

@@ -5,26 +5,46 @@ import androidx.lifecycle.viewModelScope
 import com.fuelmap.app.data.local.StationWithCurrentMark
 import com.fuelmap.app.data.local.UserEntity
 import com.fuelmap.app.data.repository.AuthRepository
+import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.FuelEntry
 import com.fuelmap.app.data.repository.MarkRepository
 import com.fuelmap.app.data.repository.StationRepository
 import com.fuelmap.app.domain.model.ConfirmationType
 import com.fuelmap.app.domain.model.Queue
 import com.fuelmap.app.util.GeoUtils
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class StationViewModel(
     private val stationRepo: StationRepository,
     private val markRepo: MarkRepository,
-    private val authRepo: AuthRepository
+    private val authRepo: AuthRepository,
+    private val favoriteRepo: FavoriteRepository
 ) : ViewModel() {
 
     val currentUser: StateFlow<UserEntity?> =
         authRepo.currentUser.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val favorites: StateFlow<Set<Long>> =
+        authRepo.currentUser.flatMapLatest { u ->
+            if (u == null) flowOf(emptySet()) else favoriteRepo.favorites(u.id)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    fun toggleFavorite(stationId: Long) {
+        val user = currentUser.value
+        if (user == null) {
+            _message.value = "Войдите, чтобы добавлять в избранное"
+            return
+        }
+        viewModelScope.launch { favoriteRepo.toggle(user.id, stationId) }
+    }
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message

@@ -2,6 +2,7 @@ package com.fuelmap.app.ui.navigation
 
 object Routes {
     const val MAP = "map"
+    const val NEARBY = "nearby"
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val RESET = "reset"

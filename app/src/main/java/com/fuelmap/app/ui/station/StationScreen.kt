@@ -10,11 +10,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,6 +43,7 @@ import com.fuelmap.app.domain.model.ConfirmationType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.util.MarkerIcons
+import com.fuelmap.app.util.NavigationLauncher
 import com.fuelmap.app.util.TimeFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +58,9 @@ fun StationScreen(
     val station by stationFlow.collectAsStateWithLifecycle()
     val user by vm.currentUser.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
+    val favorites by vm.favorites.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(message) {
         message?.let {
@@ -68,6 +76,16 @@ fun StationScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    }
+                },
+                actions = {
+                    val fav = favorites.contains(stationId)
+                    IconButton(onClick = { vm.toggleFavorite(stationId) }) {
+                        Icon(
+                            if (fav) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "В избранное",
+                            tint = if (fav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             )
@@ -142,6 +160,14 @@ fun StationScreen(
                         }
                     }
                 }
+            }
+
+            FilledTonalButton(
+                onClick = { NavigationLauncher.route(context, s.station.lat, s.station.lng, s.station.name) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.NearMe, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                Text("Поехали")
             }
 
             Button(

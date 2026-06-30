@@ -17,6 +17,7 @@ class StationRepository(
     val regions: Flow<List<RegionEntity>> = regionDao.observeAll()
     val pendingStations: Flow<List<GasStationEntity>> = stationDao.observePending()
     val pendingCount: Flow<Int> = stationDao.observePendingCount()
+    val brands: Flow<List<String>> = stationDao.observeBrands()
 
     fun observeStation(id: Long): Flow<StationWithCurrentMark?> = stationDao.observeWithCurrent(id)
 
