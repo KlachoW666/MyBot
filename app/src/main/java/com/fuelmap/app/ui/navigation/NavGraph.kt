@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,9 +71,9 @@ fun NavGraph(currentUser: UserEntity?) {
         bottomBar = {
             if (showBottomBar) {
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shadowElevation = 10.dp,
-                    shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shadowElevation = 12.dp,
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
                 ) {
                     NavigationBar(containerColor = Color.Transparent) {
                         tabs.forEach { tab ->
@@ -88,7 +89,14 @@ fun NavGraph(currentUser: UserEntity?) {
                                     }
                                 },
                                 icon = { Icon(tab.icon, contentDescription = tab.label) },
-                                label = { Text(tab.label) }
+                                label = { Text(tab.label) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primary,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             )
                         }
                     }

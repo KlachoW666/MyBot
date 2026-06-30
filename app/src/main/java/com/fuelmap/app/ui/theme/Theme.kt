@@ -44,33 +44,37 @@ private val LightColors = lightColorScheme(
     error = Color(0xFFBA1A1A)
 )
 
+// Премиальная тёмная палитра (как в референсах): глубокий сине-чёрный фон,
+// электрик-синий акцент, «стеклянные» tonal-поверхности.
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF9ECAFF),
-    onPrimary = Color(0xFF003258),
-    primaryContainer = Color(0xFF00497D),
-    onPrimaryContainer = Color(0xFFD1E4FF),
-    secondary = Color(0xFF8FCFF4),
-    onSecondary = Color(0xFF00344B),
-    secondaryContainer = Color(0xFF004C6B),
-    onSecondaryContainer = Color(0xFFC6E7FF),
-    tertiary = Color(0xFFFFB77C),
-    onTertiary = Color(0xFF4A2800),
-    tertiaryContainer = Color(0xFF6A3C00),
-    onTertiaryContainer = Color(0xFFFFDCC2),
-    background = Color(0xFF0D1116),
-    onBackground = Color(0xFFE2E2E6),
-    surface = Color(0xFF0D1116),
-    onSurface = Color(0xFFE2E2E6),
-    surfaceVariant = Color(0xFF42474E),
-    onSurfaceVariant = Color(0xFFC2C7CF),
-    surfaceContainerLowest = Color(0xFF080B0F),
-    surfaceContainerLow = Color(0xFF161A1F),
-    surfaceContainer = Color(0xFF1A1E23),
-    surfaceContainerHigh = Color(0xFF24282E),
-    surfaceContainerHighest = Color(0xFF2F3339),
-    outline = Color(0xFF8C9199),
-    outlineVariant = Color(0xFF42474E),
-    error = Color(0xFFFFB4AB)
+    primary = Color(0xFF5AA2FF),
+    onPrimary = Color(0xFF00264D),
+    primaryContainer = Color(0xFF1C4E86),
+    onPrimaryContainer = Color(0xFFD6E7FF),
+    secondary = Color(0xFF53D2FF),
+    onSecondary = Color(0xFF00344A),
+    secondaryContainer = Color(0xFF134E63),
+    onSecondaryContainer = Color(0xFFBFECFF),
+    tertiary = Color(0xFFFFC34D),
+    onTertiary = Color(0xFF3A2A00),
+    tertiaryContainer = Color(0xFF5A4300),
+    onTertiaryContainer = Color(0xFFFFE6B0),
+    background = Color(0xFF090C13),
+    onBackground = Color(0xFFE7EBF3),
+    surface = Color(0xFF090C13),
+    onSurface = Color(0xFFE7EBF3),
+    surfaceVariant = Color(0xFF222B39),
+    onSurfaceVariant = Color(0xFFAAB3C5),
+    surfaceContainerLowest = Color(0xFF05080D),
+    surfaceContainerLow = Color(0xFF0F141D),
+    surfaceContainer = Color(0xFF141A24),
+    surfaceContainerHigh = Color(0xFF1C2330),
+    surfaceContainerHighest = Color(0xFF252E3D),
+    outline = Color(0xFF3A4557),
+    outlineVariant = Color(0xFF222B39),
+    error = Color(0xFFFFB4AB),
+    inverseSurface = Color(0xFFE7EBF3),
+    inverseOnSurface = Color(0xFF11151D)
 )
 
 // Крупные «выразительные» скругления.
@@ -84,8 +88,8 @@ private val AppShapes = Shapes(
 
 @Composable
 fun FuelMapTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,        // премиальный тёмный вид по умолчанию (как в референсах)
+    dynamicColor: Boolean = false,    // фиксированный фирменный акцент, без подмены цветами обоев
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
