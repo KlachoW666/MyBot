@@ -222,7 +222,7 @@ private fun NearbyCard(
                 }
             }
             val meta = buildString {
-                if (item.station.brand.isNotBlank()) append(item.station.brand)
+                if (item.station.station.brand.isNotBlank()) append(item.station.station.brand)
                 if (item.distanceMeters != null) {
                     if (isNotEmpty()) append(" · ")
                     append(formatDistance(item.distanceMeters))
