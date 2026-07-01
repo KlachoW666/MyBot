@@ -67,6 +67,8 @@ import com.yandex.mapkit.geometry.Point
 import android.graphics.PointF
 import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.ClusterListener
+import com.yandex.mapkit.map.ClusterTapListener
 import com.yandex.mapkit.map.IconStyle
 import com.yandex.mapkit.map.InputListener
 import com.yandex.mapkit.map.Map as YMap
@@ -396,7 +398,19 @@ private fun YandexMap(
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
     val map = remember { mapView.mapWindow.map }
-    val stationsCollection = remember { map.mapObjects.addCollection() }
+    val clusterTapListeners = remember { mutableListOf<ClusterTapListener>() }
+    val clusterListener = remember {
+        ClusterListener { cluster ->
+            cluster.appearance.setIcon(ImageProvider.fromBitmap(MarkerIcons.clusterBitmap(cluster.size)))
+            val tap = ClusterTapListener { c ->
+                map.move(CameraPosition(c.appearance.geometry, map.cameraPosition.zoom + 2.0f, 0.0f, 0.0f))
+                true
+            }
+            clusterTapListeners.add(tap)
+            cluster.addClusterTapListener(tap)
+        }
+    }
+    val stationsCollection = remember { map.mapObjects.addClusterizedPlacemarkCollection(clusterListener) }
     val userCollection = remember { map.mapObjects.addCollection() }
 
     val markerIcons = remember {
@@ -471,6 +485,7 @@ private fun YandexMap(
     LaunchedEffect(markers, showLabels.value) {
         stationsCollection.clear()
         tapListeners.clear()
+        clusterTapListeners.clear()
         markers.forEach { marker ->
             val placemark = stationsCollection.addPlacemark()
             placemark.geometry = Point(marker.station.station.lat, marker.station.station.lng)
@@ -498,12 +513,15 @@ private fun YandexMap(
             tapListeners.add(listener)
             placemark.addTapListener(listener)
         }
+        stationsCollection.clusterPlacemarks(CLUSTER_RADIUS, CLUSTER_MIN_ZOOM)
     }
 
     AndroidView(factory = { mapView }, modifier = modifier)
 }
 
 private const val LABEL_ZOOM = 14.5f
+private const val CLUSTER_RADIUS = 60.0
+private const val CLUSTER_MIN_ZOOM = 14
 
 private fun formatPrice(p: Double): String =
     if (p % 1.0 == 0.0) p.toInt().toString() else "%.1f".format(p)
