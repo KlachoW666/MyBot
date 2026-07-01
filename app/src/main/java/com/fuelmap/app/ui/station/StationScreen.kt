@@ -5,10 +5,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
@@ -28,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -148,6 +154,20 @@ fun StationScreen(
                                 )
                             }
                         }
+                        mark.mark.photoUri?.let { path ->
+                            val bmp = remember(path) { BitmapFactory.decodeFile(path)?.asImageBitmap() }
+                            if (bmp != null) {
+                                Image(
+                                    bitmap = bmp,
+                                    contentDescription = "Фото отметки",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp)
+                                        .clip(MaterialTheme.shapes.medium)
+                                )
+                            }
+                        }
                         Divider()
                         Text(
                             "Подтверждений: ${mark.mark.confirmCount} · «закончилось»: ${mark.mark.emptyCount}",
@@ -161,6 +181,9 @@ fun StationScreen(
                                 OutlinedButton(onClick = { vm.confirm(mark.mark.id, ConfirmationType.EMPTY) }) {
                                     Text("Закончилось")
                                 }
+                            }
+                            TextButton(onClick = { vm.report(mark.mark.id, s.station.id) }) {
+                                Text("Пожаловаться на метку", color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }

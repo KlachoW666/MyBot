@@ -6,9 +6,11 @@ import com.fuelmap.app.data.local.GasStationEntity
 import com.fuelmap.app.data.local.MarkWithItems
 import com.fuelmap.app.data.local.RegionEntity
 import com.fuelmap.app.data.local.UserEntity
+import com.fuelmap.app.data.local.ReportEntity
 import com.fuelmap.app.data.repository.AdminRepository
 import com.fuelmap.app.data.repository.AuthRepository
 import com.fuelmap.app.data.repository.MarkRepository
+import com.fuelmap.app.data.repository.ReportRepository
 import com.fuelmap.app.data.repository.StationRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -23,8 +25,26 @@ class AdminViewModel(
     private val adminRepo: AdminRepository,
     private val stationRepo: StationRepository,
     private val markRepo: MarkRepository,
-    authRepo: AuthRepository
+    authRepo: AuthRepository,
+    private val reportRepo: ReportRepository
 ) : ViewModel() {
+
+    val reports: StateFlow<List<ReportEntity>> =
+        reportRepo.reports.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun dismissReport(id: Long) {
+        viewModelScope.launch {
+            reportRepo.dismiss(id)
+            _message.value = "Жалоба отклонена"
+        }
+    }
+
+    fun deleteReportedMark(markId: Long) {
+        viewModelScope.launch {
+            reportRepo.deleteMark(markId)
+            _message.value = "Метка удалена"
+        }
+    }
 
     val currentUser: StateFlow<UserEntity?> =
         authRepo.currentUser.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

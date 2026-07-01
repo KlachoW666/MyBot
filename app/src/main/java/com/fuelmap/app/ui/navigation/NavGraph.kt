@@ -42,6 +42,7 @@ import com.fuelmap.app.ui.admin.AdminUserScreen
 import com.fuelmap.app.ui.auth.LoginScreen
 import com.fuelmap.app.ui.auth.RegisterScreen
 import com.fuelmap.app.ui.auth.ResetScreen
+import com.fuelmap.app.ui.fuellog.FuelLogScreen
 import com.fuelmap.app.ui.leaderboard.LeaderboardScreen
 import com.fuelmap.app.ui.map.MapScreen
 import com.fuelmap.app.ui.nearby.NearbyScreen
@@ -136,11 +137,16 @@ fun NavGraph(currentUser: UserEntity?) {
                 SettingsScreen(onBack = { nav.popBackStack() })
             }
 
+            composable(Routes.FUELLOG) {
+                FuelLogScreen(onBack = { nav.popBackStack() })
+            }
+
             composable(Routes.PROFILE) {
                 ProfileScreen(
                     onLogin = { nav.navigate(Routes.LOGIN) },
                     onRegister = { nav.navigate(Routes.REGISTER) },
-                    onSettings = { nav.navigate(Routes.SETTINGS) }
+                    onSettings = { nav.navigate(Routes.SETTINGS) },
+                    onFuelLog = { nav.navigate(Routes.FUELLOG) }
                 )
             }
 

@@ -42,6 +42,7 @@ fun AdminModerationScreen(
     vm: AdminViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val pending by vm.pendingStations.collectAsStateWithLifecycle()
+    val reports by vm.reports.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
@@ -69,6 +70,7 @@ fun AdminModerationScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            item { Text("Новые АЗС (${pending.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
             if (pending.isEmpty()) {
                 item {
                     com.fuelmap.app.ui.common.EmptyState(
@@ -97,6 +99,36 @@ fun AdminModerationScreen(
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colorScheme.error
                                 ),
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Отклонить") }
+                        }
+                    }
+                }
+            }
+
+            item { Text("Жалобы на метки (${reports.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+            if (reports.isEmpty()) {
+                item {
+                    Text(
+                        "Жалоб нет.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            items(reports) { report ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Причина: ${report.reason}", fontWeight = FontWeight.Bold)
+                        Text("Метка #${report.markId} · АЗС #${report.stationId}", style = MaterialTheme.typography.labelMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { vm.deleteReportedMark(report.markId) },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Удалить метку") }
+                            OutlinedButton(
+                                onClick = { vm.dismissReport(report.id) },
                                 modifier = Modifier.weight(1f)
                             ) { Text("Отклонить") }
                         }

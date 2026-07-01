@@ -14,9 +14,11 @@ import androidx.room.TypeConverters
         FuelMarkEntity::class,
         FuelMarkItemEntity::class,
         ConfirmationEntity::class,
-        FavoriteEntity::class
+        FavoriteEntity::class,
+        ReportEntity::class,
+        FuelLogEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -27,6 +29,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun markDao(): MarkDao
     abstract fun confirmationDao(): ConfirmationDao
     abstract fun favoriteDao(): FavoriteDao
+    abstract fun reportDao(): ReportDao
+    abstract fun fuelLogDao(): FuelLogDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null

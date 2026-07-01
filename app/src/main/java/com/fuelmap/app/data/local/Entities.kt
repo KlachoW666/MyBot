@@ -89,7 +89,8 @@ data class FuelMarkEntity(
     val isCurrent: Boolean = true,
     val queue: Queue = Queue.NONE,
     val confirmCount: Int = 0,
-    val emptyCount: Int = 0
+    val emptyCount: Int = 0,
+    val photoUri: String? = null
 )
 
 @Entity(
@@ -120,6 +121,26 @@ data class FavoriteEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val userId: Long,
     val stationId: Long
+)
+
+@Entity(tableName = "reports", indices = [Index("markId")])
+data class ReportEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val markId: Long,
+    val stationId: Long,
+    val userId: Long,
+    val reason: String,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "fuel_log", indices = [Index("userId")])
+data class FuelLogEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Long,
+    val dateMillis: Long = System.currentTimeMillis(),
+    val liters: Double,
+    val cost: Double,
+    val odometer: Double
 )
 
 @Entity(

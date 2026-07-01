@@ -157,6 +157,36 @@ interface FavoriteDao {
 }
 
 @Dao
+interface ReportDao {
+    @Insert
+    suspend fun insert(report: ReportEntity)
+
+    @Query("SELECT * FROM reports ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<ReportEntity>>
+
+    @Query("SELECT COUNT(*) FROM reports")
+    fun observeCount(): Flow<Int>
+
+    @Query("DELETE FROM reports WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("DELETE FROM reports WHERE markId = :markId")
+    suspend fun deleteForMark(markId: Long)
+}
+
+@Dao
+interface FuelLogDao {
+    @Insert
+    suspend fun insert(entry: FuelLogEntity)
+
+    @Query("DELETE FROM fuel_log WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM fuel_log WHERE userId = :userId ORDER BY odometer DESC, dateMillis DESC")
+    fun observeForUser(userId: Long): Flow<List<FuelLogEntity>>
+}
+
+@Dao
 interface ConfirmationDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(confirmation: ConfirmationEntity): Long

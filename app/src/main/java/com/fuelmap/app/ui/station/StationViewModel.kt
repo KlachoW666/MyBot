@@ -8,6 +8,7 @@ import com.fuelmap.app.data.repository.AuthRepository
 import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.FuelEntry
 import com.fuelmap.app.data.repository.MarkRepository
+import com.fuelmap.app.data.repository.ReportRepository
 import com.fuelmap.app.data.repository.StationRepository
 import com.fuelmap.app.data.settings.SettingsManager
 import com.fuelmap.app.domain.model.ConfirmationType
@@ -28,8 +29,21 @@ class StationViewModel(
     private val markRepo: MarkRepository,
     private val authRepo: AuthRepository,
     private val favoriteRepo: FavoriteRepository,
-    private val settings: SettingsManager
+    private val settings: SettingsManager,
+    private val reportRepo: ReportRepository
 ) : ViewModel() {
+
+    fun report(markId: Long, stationId: Long) {
+        val user = currentUser.value
+        if (user == null) {
+            _message.value = "Войдите, чтобы пожаловаться"
+            return
+        }
+        viewModelScope.launch {
+            reportRepo.report(markId, stationId, user.id, "Недостоверная информация")
+            _message.value = "Жалоба отправлена на модерацию"
+        }
+    }
 
     val currentUser: StateFlow<UserEntity?> =
         authRepo.currentUser.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -70,6 +84,7 @@ class StationViewModel(
         queue: Queue,
         userLat: Double?,
         userLng: Double?,
+        photoUri: String? = null,
         onDone: () -> Unit
     ) {
         viewModelScope.launch {
@@ -103,7 +118,7 @@ class StationViewModel(
                 }
             }
 
-            markRepo.submitMark(stationId, user.id, entries, queue)
+            markRepo.submitMark(stationId, user.id, entries, queue, photoUri)
                 .onSuccess {
                     _message.value = "Спасибо! Отметка сохранена"
                     onDone()

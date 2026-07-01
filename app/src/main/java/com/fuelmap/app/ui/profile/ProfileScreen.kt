@@ -53,6 +53,7 @@ fun ProfileScreen(
     onLogin: () -> Unit,
     onRegister: () -> Unit,
     onSettings: () -> Unit = {},
+    onFuelLog: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     vm: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -126,6 +127,11 @@ fun ProfileScreen(
                         InfoRow("Госномер", u.carPlate)
                         InfoRow("Регион", u.region)
                     }
+                }
+            }
+            item {
+                Button(onClick = onFuelLog, modifier = Modifier.fillMaxWidth()) {
+                    Text("Бортжурнал")
                 }
             }
             item {

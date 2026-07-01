@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.fuelmap.app.FuelMapApplication
 import com.fuelmap.app.ui.admin.AdminViewModel
 import com.fuelmap.app.ui.auth.AuthViewModel
+import com.fuelmap.app.ui.fuellog.FuelLogViewModel
 import com.fuelmap.app.ui.leaderboard.LeaderboardViewModel
 import com.fuelmap.app.ui.map.MapViewModel
 import com.fuelmap.app.ui.nearby.NearbyViewModel
@@ -34,7 +35,8 @@ object AppViewModelProvider {
                 app().container.markRepository,
                 app().container.authRepository,
                 app().container.favoriteRepository,
-                app().container.settingsManager
+                app().container.settingsManager,
+                app().container.reportRepository
             )
         }
         initializer {
@@ -44,6 +46,12 @@ object AppViewModelProvider {
             )
         }
         initializer { SettingsViewModel(app().container.settingsManager) }
+        initializer {
+            FuelLogViewModel(
+                app().container.authRepository,
+                app().container.fuelLogRepository
+            )
+        }
         initializer {
             NearbyViewModel(
                 app().container.stationRepository,
@@ -62,7 +70,8 @@ object AppViewModelProvider {
                 app().container.adminRepository,
                 app().container.stationRepository,
                 app().container.markRepository,
-                app().container.authRepository
+                app().container.authRepository,
+                app().container.reportRepository
             )
         }
     }

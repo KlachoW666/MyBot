@@ -33,10 +33,11 @@ class MarkRepository(
         stationId: Long,
         userId: Long,
         entries: List<FuelEntry>,
-        queue: Queue
+        queue: Queue,
+        photoUri: String? = null
     ): Result<Long> {
         if (entries.isEmpty()) return Result.failure(IllegalArgumentException("Выберите хотя бы один тип топлива"))
-        val mark = FuelMarkEntity(stationId = stationId, userId = userId, queue = queue)
+        val mark = FuelMarkEntity(stationId = stationId, userId = userId, queue = queue, photoUri = photoUri)
         val items = entries.map {
             FuelMarkItemEntity(markId = 0, type = it.type, available = it.available, price = it.price)
         }

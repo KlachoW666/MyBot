@@ -2,6 +2,7 @@ package com.fuelmap.app.ui.station
 
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -62,6 +64,7 @@ import com.fuelmap.app.domain.model.Queue
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.SupportFooter
 import com.fuelmap.app.util.LocationProvider
+import com.fuelmap.app.util.PhotoStorage
 import kotlinx.coroutines.launch
 
 private data class FuelInput(val available: Boolean = true, val price: String = "")
@@ -83,7 +86,14 @@ fun MarkScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var locating by remember { mutableStateOf(false) }
+    var photoPath by remember { mutableStateOf<String?>(null) }
     val isAdmin = user?.role?.isAdmin == true
+
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) photoPath = PhotoStorage.copyToInternal(context, uri)
+    }
 
     fun buildEntries(): List<FuelEntry> = selected.map { (type, input) ->
         FuelEntry(type, input.available, input.price.replace(',', '.').toDoubleOrNull() ?: 0.0)
@@ -96,7 +106,7 @@ fun MarkScreen(
         } finally {
             locating = false
         }
-        vm.submitMark(stationId, buildEntries(), queue, loc?.latitude, loc?.longitude, onDone = onBack)
+        vm.submitMark(stationId, buildEntries(), queue, loc?.latitude, loc?.longitude, photoPath, onDone = onBack)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -109,7 +119,7 @@ fun MarkScreen(
     fun attemptSubmit() {
         // Админ/супер-админ — без геолокации и проверки расстояния.
         if (isAdmin) {
-            scope.launch { vm.submitMark(stationId, buildEntries(), queue, null, null, onDone = onBack) }
+            scope.launch { vm.submitMark(stationId, buildEntries(), queue, null, null, photoPath, onDone = onBack) }
             return
         }
         if (LocationProvider.hasPermission(context)) scope.launch { submitWithLocation() }
@@ -211,6 +221,20 @@ fun MarkScreen(
                             shape = SegmentedButtonDefaults.itemShape(index, Queue.entries.size)
                         ) { Text(q.title) }
                     }
+                }
+            }
+
+            item { Text("Фото (необязательно)", style = MaterialTheme.typography.titleMedium) }
+            item {
+                OutlinedButton(
+                    onClick = {
+                        photoPicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (photoPath == null) "Прикрепить фото табло/очереди" else "Фото прикреплено ✓ — заменить")
                 }
             }
         }
