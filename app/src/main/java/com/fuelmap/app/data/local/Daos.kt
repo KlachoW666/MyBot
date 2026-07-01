@@ -124,6 +124,10 @@ interface MarkDao {
     @Query("SELECT * FROM fuel_marks WHERE userId = :userId ORDER BY createdAt DESC")
     fun observeUserHistory(userId: Long): Flow<List<MarkWithItems>>
 
+    @Transaction
+    @Query("SELECT * FROM fuel_marks WHERE stationId = :stationId ORDER BY createdAt ASC")
+    fun observeStationHistory(stationId: Long): Flow<List<MarkWithItems>>
+
     /**
      * Атомарно сохраняет новую отметку как актуальную: сбрасывает прежний актуальный
      * статус АЗС и вставляет новый с его типами топлива.

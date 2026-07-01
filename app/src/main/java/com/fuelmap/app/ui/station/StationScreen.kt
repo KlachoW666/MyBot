@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,8 +41,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.ConfirmationType
+import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.PriceChart
 import com.fuelmap.app.util.MarkerIcons
 import com.fuelmap.app.util.NavigationLauncher
 import com.fuelmap.app.util.TimeFormat
@@ -59,6 +62,8 @@ fun StationScreen(
     val user by vm.currentUser.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val favorites by vm.favorites.collectAsStateWithLifecycle()
+    val historyFlow = remember(stationId) { vm.stationHistory(stationId) }
+    val history by historyFlow.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -158,6 +163,33 @@ fun StationScreen(
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            val chartType = FuelType.entries.maxByOrNull { t ->
+                history.count { m -> m.items.any { it.type == t && it.available } }
+            }
+            val series = chartType?.let { t ->
+                history.mapNotNull { m -> m.items.firstOrNull { it.type == t && it.available }?.price?.toFloat() }
+            }.orEmpty()
+            if (series.size >= 2 && chartType != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Динамика цен · ${chartType.title}", style = MaterialTheme.typography.titleMedium)
+                        PriceChart(
+                            points = series,
+                            lineColor = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().height(120.dp)
+                        )
+                        Text(
+                            "от ${"%.2f".format(series.min())} ₽ до ${"%.2f".format(series.max())} ₽",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

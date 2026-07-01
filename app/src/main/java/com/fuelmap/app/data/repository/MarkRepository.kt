@@ -26,6 +26,8 @@ class MarkRepository(
 ) {
     fun userHistory(userId: Long): Flow<List<MarkWithItems>> = markDao.observeUserHistory(userId)
 
+    fun stationHistory(stationId: Long): Flow<List<MarkWithItems>> = markDao.observeStationHistory(stationId)
+
     /** Сохраняет новую актуальную отметку (серверное время = System.currentTimeMillis()). */
     suspend fun submitMark(
         stationId: Long,

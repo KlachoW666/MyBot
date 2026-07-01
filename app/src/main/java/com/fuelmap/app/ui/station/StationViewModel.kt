@@ -53,6 +53,10 @@ class StationViewModel(
         stationRepo.observeStation(id)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    fun stationHistory(id: Long): StateFlow<List<com.fuelmap.app.data.local.MarkWithItems>> =
+        markRepo.stationHistory(id)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun clearMessage() { _message.value = null }
 
     fun showMessage(msg: String) { _message.value = msg }

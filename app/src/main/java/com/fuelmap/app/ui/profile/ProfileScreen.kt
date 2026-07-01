@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -31,11 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fuelmap.app.domain.model.Gamification
 import com.fuelmap.app.domain.model.Role
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.BrandHeader
@@ -200,6 +203,38 @@ private fun ProfileHeader(
                 StatTile("$karma", "Карма", Modifier.weight(1f))
                 StatTile("$marks", "Отметки", Modifier.weight(1f))
                 StatTile(region.take(14), "Регион", Modifier.weight(1f))
+            }
+
+            val level = Gamification.levelFor(karma)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        "Ур. ${level.level} · ${level.title}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        "$karma / ${level.nextAt}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { level.progress },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Gamification.badges(karma, marks).forEach { badge ->
+                    Text(
+                        badge.emoji,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.alpha(if (badge.unlocked) 1f else 0.25f)
+                    )
+                }
             }
         }
     }
