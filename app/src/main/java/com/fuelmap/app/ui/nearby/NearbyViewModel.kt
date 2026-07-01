@@ -7,6 +7,7 @@ import com.fuelmap.app.data.repository.AuthRepository
 import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.StationRepository
 import com.fuelmap.app.domain.model.Queue
+import com.fuelmap.app.domain.model.hasPremium
 import com.fuelmap.app.util.GeoUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -55,6 +57,17 @@ class NearbyViewModel(
 
     val brands: StateFlow<List<String>> =
         stationRepo.brands.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val isPremium: StateFlow<Boolean> =
+        authRepo.currentUser.map { it?.hasPremium() ?: false }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun subscribePremium() {
+        viewModelScope.launch {
+            authRepo.activatePremium()
+            _message.value = "Premium активирован на 30 дней! 🎉"
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val favoriteIds: Flow<Set<Long>> =

@@ -13,6 +13,8 @@ import com.fuelmap.app.data.settings.SettingsManager
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.domain.model.StationStatus
+import com.fuelmap.app.domain.model.hasPremium
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,6 +57,17 @@ class MapViewModel(
 
     val appSettings: StateFlow<AppSettings> =
         settings.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
+
+    val isPremium: StateFlow<Boolean> =
+        authRepo.currentUser.map { it?.hasPremium() ?: false }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun subscribePremium() {
+        viewModelScope.launch {
+            authRepo.activatePremium()
+            _message.value = "Premium активирован на 30 дней! 🎉"
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val favorites: StateFlow<Set<Long>> =

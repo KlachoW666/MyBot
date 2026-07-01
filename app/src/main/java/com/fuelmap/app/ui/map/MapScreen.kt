@@ -58,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.PremiumPaywall
 import com.fuelmap.app.util.GeoUtils
 import com.fuelmap.app.util.LocationProvider
 import com.fuelmap.app.util.MarkerIcons
@@ -91,6 +92,7 @@ fun MapScreen(
     val message by vm.message.collectAsStateWithLifecycle()
     val favorites by vm.favorites.collectAsStateWithLifecycle()
     val settings by vm.appSettings.collectAsStateWithLifecycle()
+    val isPremium by vm.isPremium.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
     val context = LocalContext.current
@@ -100,6 +102,7 @@ fun MapScreen(
     var userPoint by remember { mutableStateOf<Point?>(null) }
     var selectedStationId by remember { mutableStateOf<Long?>(null) }
     var addPoint by remember { mutableStateOf<Point?>(null) }
+    var showPaywall by remember { mutableStateOf(false) }
     // Станции, о которых уже уведомили в этой сессии (чтобы не спамить).
     val notifiedStations = remember { mutableSetOf<Long>() }
 
@@ -110,7 +113,7 @@ fun MapScreen(
     fun checkGeoNotifications(lat: Double, lng: Double) {
         val s = settings
         val fuel = s.preferredFuel
-        if (!s.geoNotifyEnabled || fuel == null) return
+        if (!isPremium || !s.geoNotifyEnabled || fuel == null) return
         markers.forEach { marker ->
             val st = marker.station.station
             if (!favorites.contains(st.id)) return@forEach
@@ -251,16 +254,29 @@ fun MapScreen(
             isFavorite = favorites.contains(selected.station.station.id),
             onFavorite = { vm.toggleFavorite(selected.station.station.id) },
             onRoute = {
-                NavigationLauncher.route(
-                    context,
-                    selected.station.station.lat,
-                    selected.station.station.lng,
-                    selected.station.station.name
-                )
+                if (isPremium) {
+                    NavigationLauncher.route(
+                        context,
+                        selected.station.station.lat,
+                        selected.station.station.lng,
+                        selected.station.station.name
+                    )
+                } else {
+                    selectedStationId = null
+                    showPaywall = true
+                }
             },
             onDismiss = { selectedStationId = null },
             onMark = { selectedStationId = null; onMark(it) },
             onDetails = { selectedStationId = null; onStationDetails(it) }
+        )
+    }
+
+    if (showPaywall) {
+        PremiumPaywall(
+            onSubscribe = { vm.subscribePremium(); showPaywall = false },
+            onDismiss = { showPaywall = false },
+            highlight = "Построение маршрута доступно в Premium."
         )
     }
 

@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.EmptyState
+import com.fuelmap.app.ui.common.PremiumPaywall
 import com.fuelmap.app.util.LocationProvider
 import com.fuelmap.app.util.NavigationLauncher
 import kotlinx.coroutines.launch
@@ -71,11 +72,13 @@ fun NearbyScreen(
     val onlyFav by vm.onlyFavorites.collectAsStateWithLifecycle()
     val noQueue by vm.onlyNoQueue.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
+    val isPremium by vm.isPremium.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var brandExpanded by remember { mutableStateOf(false) }
+    var showPaywall by remember { mutableStateOf(false) }
 
     fun loadLocation() {
         scope.launch {
@@ -178,18 +181,30 @@ fun NearbyScreen(
                             onClick = { onStationDetails(item.station.station.id) },
                             onFavorite = { vm.toggleFavorite(item.station.station.id) },
                             onRoute = {
-                                NavigationLauncher.route(
-                                    context,
-                                    item.station.station.lat,
-                                    item.station.station.lng,
-                                    item.station.station.name
-                                )
+                                if (isPremium) {
+                                    NavigationLauncher.route(
+                                        context,
+                                        item.station.station.lat,
+                                        item.station.station.lng,
+                                        item.station.station.name
+                                    )
+                                } else {
+                                    showPaywall = true
+                                }
                             }
                         )
                     }
                 }
             }
         }
+    }
+
+    if (showPaywall) {
+        PremiumPaywall(
+            onSubscribe = { vm.subscribePremium(); showPaywall = false },
+            onDismiss = { showPaywall = false },
+            highlight = "Построение маршрута доступно в Premium."
+        )
     }
 }
 

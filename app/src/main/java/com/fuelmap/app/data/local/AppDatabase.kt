@@ -18,7 +18,7 @@ import androidx.room.TypeConverters
         ReportEntity::class,
         FuelLogEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -118,6 +118,20 @@ class AdminViewModel(
         }
     }
 
+    fun grantPremium(user: UserEntity) {
+        viewModelScope.launch {
+            adminRepo.grantPremium(user)
+            _message.value = "Premium выдан на 30 дней"
+        }
+    }
+
+    fun revokePremium(user: UserEntity) {
+        viewModelScope.launch {
+            adminRepo.revokePremium(user)
+            _message.value = "Premium снят"
+        }
+    }
+
     fun deleteMark(markId: Long) {
         viewModelScope.launch {
             markRepo.deleteMark(markId)

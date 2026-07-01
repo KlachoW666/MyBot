@@ -26,11 +26,17 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -45,7 +51,9 @@ import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.BrandHeader
 import com.fuelmap.app.ui.common.EmptyState
 import com.fuelmap.app.ui.common.MarkHistoryRow
+import com.fuelmap.app.ui.common.PremiumPaywall
 import com.fuelmap.app.ui.common.SupportFooter
+import com.fuelmap.app.util.TimeFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,24 +67,35 @@ fun ProfileScreen(
 ) {
     val user by vm.currentUser.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
+    val isPremium by vm.isPremium.collectAsStateWithLifecycle()
+    val message by vm.message.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    var showPaywall by remember { mutableStateOf(false) }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Профиль") },
-            navigationIcon = {
-                if (onBack != null) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+    LaunchedEffect(message) {
+        message?.let { snackbar.showSnackbar(it); vm.clearMessage() }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Профиль") },
+                navigationIcon = {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Настройки")
                     }
                 }
-            },
-            actions = {
-                IconButton(onClick = onSettings) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Настройки")
-                }
-            }
-        )
-    }) { padding ->
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
         val u = user
         if (u == null) {
             Column(
@@ -130,6 +149,14 @@ fun ProfileScreen(
                 }
             }
             item {
+                PremiumCard(
+                    isPremium = isPremium,
+                    isAdmin = u.role.isAdmin,
+                    premiumUntil = u.premiumUntil,
+                    onSubscribe = { showPaywall = true }
+                )
+            }
+            item {
                 Button(onClick = onFuelLog, modifier = Modifier.fillMaxWidth()) {
                     Text("Бортжурнал")
                 }
@@ -152,6 +179,56 @@ fun ProfileScreen(
                 items(history) { mark -> MarkHistoryRow(mark) }
             }
             item { SupportFooter() }
+        }
+    }
+
+    if (showPaywall) {
+        PremiumPaywall(
+            onSubscribe = { vm.subscribePremium(); showPaywall = false },
+            onDismiss = { showPaywall = false }
+        )
+    }
+}
+
+@Composable
+private fun PremiumCard(
+    isPremium: Boolean,
+    isAdmin: Boolean,
+    premiumUntil: Long?,
+    onSubscribe: () -> Unit
+) {
+    Surface(
+        color = if (isPremium) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                if (isPremium) "⭐ Premium активен" else "Russia Oil Premium",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isPremium) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurface
+            )
+            if (isPremium) {
+                val subtitle = when {
+                    isAdmin && premiumUntil == null -> "Включён для администратора"
+                    premiumUntil != null -> "Действует до ${TimeFormat.dateTime(premiumUntil)}"
+                    else -> "Подписка активна"
+                }
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+            } else {
+                Text(
+                    "Фото с АЗС, гео- и Telegram-уведомления, маршрут «Поехали».",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(onClick = onSubscribe, modifier = Modifier.fillMaxWidth()) {
+                    Text("Оформить Premium")
+                }
+            }
         }
     }
 }

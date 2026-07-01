@@ -45,7 +45,12 @@ object AppViewModelProvider {
                 app().container.markRepository
             )
         }
-        initializer { SettingsViewModel(app().container.settingsManager) }
+        initializer {
+            SettingsViewModel(
+                app().container.settingsManager,
+                app().container.authRepository
+            )
+        }
         initializer {
             FuelLogViewModel(
                 app().container.authRepository,

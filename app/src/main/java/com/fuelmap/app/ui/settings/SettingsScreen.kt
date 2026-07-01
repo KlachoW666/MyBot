@@ -1,6 +1,8 @@
 package com.fuelmap.app.ui.settings
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -28,17 +31,22 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,6 +54,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.data.settings.ThemeMode
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.PremiumPaywall
+import com.fuelmap.app.ui.common.SUPPORT_TELEGRAM
+import com.fuelmap.app.ui.common.SUPPORT_TELEGRAM_URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,13 +65,26 @@ fun SettingsScreen(
     vm: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val settings by vm.state.collectAsStateWithLifecycle()
+    val isPremium by vm.isPremium.collectAsStateWithLifecycle()
+    val message by vm.message.collectAsStateWithLifecycle()
     var fuelExpanded by remember { mutableStateOf(false) }
+    var showPaywall by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val snackbar = remember { SnackbarHostState() }
+
+    LaunchedEffect(message) {
+        message?.let { snackbar.showSnackbar(it); vm.clearMessage() }
+    }
 
     val notifyPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> vm.setGeoNotify(granted) }
 
     fun onGeoNotifyChange(enabled: Boolean) {
+        if (enabled && !isPremium) {
+            showPaywall = true
+            return
+        }
         if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
@@ -68,16 +92,28 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Настройки") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+    fun openTelegram() {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(SUPPORT_TELEGRAM_URL))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Настройки") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    }
                 }
-            }
-        )
-    }) { padding ->
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -136,10 +172,10 @@ fun SettingsScreen(
                 )
             }
 
-            SettingCard("Гео-уведомления") {
+            SettingCard("Гео-уведомления · Premium") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Уведомлять о топливе рядом", style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = settings.geoNotifyEnabled, onCheckedChange = { onGeoNotifyChange(it) })
+                    Switch(checked = settings.geoNotifyEnabled && isPremium, onCheckedChange = { onGeoNotifyChange(it) })
                 }
                 Text(
                     "Пуш о наличии нужного топлива на избранных АЗС поблизости.",
@@ -147,7 +183,34 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            SettingCard("Telegram-уведомления · Premium") {
+                Text(
+                    "Получайте уведомления о топливе в нашем Telegram-канале @$SUPPORT_TELEGRAM.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = { if (isPremium) openTelegram() else showPaywall = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isPremium) "Открыть Telegram-канал" else "Подключить (Premium)")
+                }
+            }
+
+            if (!isPremium) {
+                Button(onClick = { showPaywall = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Оформить Premium")
+                }
+            }
         }
+    }
+
+    if (showPaywall) {
+        PremiumPaywall(
+            onSubscribe = { vm.subscribePremium(); showPaywall = false },
+            onDismiss = { showPaywall = false }
+        )
     }
 }
 

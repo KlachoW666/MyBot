@@ -1,16 +1,20 @@
 package com.fuelmap.app.ui.station
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -18,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -38,7 +43,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +57,7 @@ import com.fuelmap.app.domain.model.ConfirmationType
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.PremiumPaywall
 import com.fuelmap.app.ui.common.PriceChart
 import com.fuelmap.app.util.MarkerIcons
 import com.fuelmap.app.util.NavigationLauncher
@@ -68,10 +76,12 @@ fun StationScreen(
     val user by vm.currentUser.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val favorites by vm.favorites.collectAsStateWithLifecycle()
+    val isPremium by vm.isPremium.collectAsStateWithLifecycle()
     val historyFlow = remember(stationId) { vm.stationHistory(stationId) }
     val history by historyFlow.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
+    var showPaywall by remember { mutableStateOf(false) }
 
     LaunchedEffect(message) {
         message?.let {
@@ -155,17 +165,21 @@ fun StationScreen(
                             }
                         }
                         mark.mark.photoUri?.let { path ->
-                            val bmp = remember(path) { BitmapFactory.decodeFile(path)?.asImageBitmap() }
-                            if (bmp != null) {
-                                Image(
-                                    bitmap = bmp,
-                                    contentDescription = "Фото отметки",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(180.dp)
-                                        .clip(MaterialTheme.shapes.medium)
-                                )
+                            if (isPremium) {
+                                val bmp = remember(path) { BitmapFactory.decodeFile(path)?.asImageBitmap() }
+                                if (bmp != null) {
+                                    Image(
+                                        bitmap = bmp,
+                                        contentDescription = "Фото отметки",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(180.dp)
+                                            .clip(MaterialTheme.shapes.medium)
+                                    )
+                                }
+                            } else {
+                                LockedPhotoPlaceholder(onClick = { showPaywall = true })
                             }
                         }
                         Divider()
@@ -218,10 +232,17 @@ fun StationScreen(
             }
 
             FilledTonalButton(
-                onClick = { NavigationLauncher.route(context, s.station.lat, s.station.lng, s.station.name) },
+                onClick = {
+                    if (isPremium) NavigationLauncher.route(context, s.station.lat, s.station.lng, s.station.name)
+                    else showPaywall = true
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Filled.NearMe, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                Icon(
+                    if (isPremium) Icons.Filled.NearMe else Icons.Filled.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
                 Text("Поехали")
             }
 
@@ -231,6 +252,32 @@ fun StationScreen(
             ) {
                 Text(if (user == null) "Войдите, чтобы отметить" else "Отметить наличие")
             }
+        }
+    }
+
+    if (showPaywall) {
+        PremiumPaywall(
+            onSubscribe = { vm.subscribePremium(); showPaywall = false },
+            onDismiss = { showPaywall = false },
+            highlight = "Эта возможность доступна в Premium."
+        )
+    }
+}
+
+@Composable
+private fun LockedPhotoPlaceholder(onClick: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text("Фото доступно в Premium", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

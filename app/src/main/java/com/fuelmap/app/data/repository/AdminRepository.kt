@@ -2,6 +2,7 @@ package com.fuelmap.app.data.repository
 
 import com.fuelmap.app.data.local.UserDao
 import com.fuelmap.app.data.local.UserEntity
+import com.fuelmap.app.domain.model.Premium
 import com.fuelmap.app.domain.model.Role
 import kotlinx.coroutines.flow.Flow
 
@@ -21,6 +22,18 @@ class AdminRepository(private val userDao: UserDao) {
         if (user.role == Role.SUPER_ADMIN) return Result.failure(IllegalStateException("Нельзя забанить супер-администратора"))
         userDao.update(user.copy(isBanned = banned))
         return Result.success(Unit)
+    }
+
+    /** Выдать Premium вручную на [days] дней (от текущей даты окончания, если подписка активна). */
+    suspend fun grantPremium(user: UserEntity, days: Int = Premium.TRIAL_DAYS) {
+        val now = System.currentTimeMillis()
+        val base = user.premiumUntil?.takeIf { it > now } ?: now
+        userDao.update(user.copy(premiumUntil = base + days * Premium.DAY_MS))
+    }
+
+    /** Снять Premium. */
+    suspend fun revokePremium(user: UserEntity) {
+        userDao.update(user.copy(premiumUntil = null))
     }
 
     /** Назначение/снятие роли admin. Доступно только супер-администратору (проверяется в VM/UI). */

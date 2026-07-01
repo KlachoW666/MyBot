@@ -4,6 +4,7 @@ import com.fuelmap.app.data.local.UserDao
 import com.fuelmap.app.data.local.UserEntity
 import com.fuelmap.app.data.security.PasswordHasher
 import com.fuelmap.app.data.session.SessionManager
+import com.fuelmap.app.domain.model.Premium
 import com.fuelmap.app.util.PlateValidator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -89,6 +90,19 @@ class AuthRepository(
 
     /** Текущий пользователь на момент вызова (надёжно, без зависимости от подписки UI). */
     suspend fun currentUserOnce(): UserEntity? = currentUser.first()
+
+    /**
+     * Активирует Premium текущему пользователю на [days] дней (демо-активация, без реальной оплаты).
+     * Если подписка ещё действует — продлевает от текущей даты окончания.
+     */
+    suspend fun activatePremium(days: Int = Premium.TRIAL_DAYS): AuthResult {
+        val user = currentUserOnce() ?: return AuthResult.Error("Войдите, чтобы оформить Premium")
+        val now = System.currentTimeMillis()
+        val base = user.premiumUntil?.takeIf { it > now } ?: now
+        val updated = user.copy(premiumUntil = base + days * Premium.DAY_MS)
+        userDao.update(updated)
+        return AuthResult.Success(updated)
+    }
 
     suspend fun logout() = session.signOut()
 }

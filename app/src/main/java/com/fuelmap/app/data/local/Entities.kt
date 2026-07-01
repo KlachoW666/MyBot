@@ -25,6 +25,8 @@ data class UserEntity(
     val role: Role = Role.USER,
     val karma: Int = 0,
     val isBanned: Boolean = false,
+    /** Время (мс) окончания Premium-подписки; null — подписки нет. Админы имеют Premium неявно. */
+    val premiumUntil: Long? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 

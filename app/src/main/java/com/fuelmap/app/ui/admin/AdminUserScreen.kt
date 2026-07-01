@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.Role
+import com.fuelmap.app.domain.model.hasPremium
 import com.fuelmap.app.ui.AppViewModelProvider
 import com.fuelmap.app.ui.common.MarkHistoryRow
 import com.fuelmap.app.util.TimeFormat
@@ -92,6 +93,13 @@ fun AdminUserScreen(
                         Text("Регион: ${u.region}")
                         Text("Карма: ${u.karma}")
                         Text("Роль: ${roleLabelFull(u.role)}", color = MaterialTheme.colorScheme.primary)
+                        val premiumText = when {
+                            u.role.isAdmin -> "Premium: включён (администратор)"
+                            u.premiumUntil?.let { it > System.currentTimeMillis() } == true ->
+                                "Premium: активен до ${TimeFormat.dateTime(u.premiumUntil)}"
+                            else -> "Premium: нет"
+                        }
+                        Text(premiumText, color = MaterialTheme.colorScheme.primary)
                         Text("Регистрация: ${TimeFormat.dateTime(u.createdAt)}", style = MaterialTheme.typography.labelMedium)
                         if (u.isBanned) {
                             Text("Статус: ЗАБАНЕН", color = MaterialTheme.colorScheme.error)
@@ -125,6 +133,20 @@ fun AdminUserScreen(
                             } else {
                                 OutlinedButton(onClick = { vm.setAdmin(actor!!, u, true) }, modifier = Modifier.fillMaxWidth()) {
                                     Text("Назначить администратором")
+                                }
+                            }
+                        }
+
+                        // Управление Premium (админам не требуется — у них Premium неявно)
+                        if (!u.role.isAdmin) {
+                            val premiumActive = u.premiumUntil?.let { it > System.currentTimeMillis() } == true
+                            if (premiumActive) {
+                                OutlinedButton(onClick = { vm.revokePremium(u) }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Снять Premium")
+                                }
+                            } else {
+                                OutlinedButton(onClick = { vm.grantPremium(u) }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Выдать Premium (30 дней)")
                                 }
                             }
                         }
