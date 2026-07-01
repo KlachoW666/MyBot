@@ -2,6 +2,7 @@ package com.fuelmap.app
 
 import android.app.Application
 import com.fuelmap.app.data.local.DatabaseSeeder
+import com.fuelmap.app.util.Notifications
 import com.yandex.mapkit.MapKitFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,8 @@ class FuelMapApplication : Application() {
         MapKitFactory.initialize(this)
 
         container = AppContainer(this)
+
+        Notifications.ensureChannel(this)
 
         // Идемпотентный сидинг: супер-админ, регионы, базовые АЗС.
         appScope.launch {

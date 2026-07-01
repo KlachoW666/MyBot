@@ -58,9 +58,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.util.GeoUtils
 import com.fuelmap.app.util.LocationProvider
 import com.fuelmap.app.util.MarkerIcons
 import com.fuelmap.app.util.NavigationLauncher
+import com.fuelmap.app.util.Notifications
 import com.fuelmap.app.util.TimeFormat
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -88,6 +90,7 @@ fun MapScreen(
     val filter by vm.fuelFilter.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val favorites by vm.favorites.collectAsStateWithLifecycle()
+    val settings by vm.appSettings.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
     val context = LocalContext.current
@@ -97,6 +100,31 @@ fun MapScreen(
     var userPoint by remember { mutableStateOf<Point?>(null) }
     var selectedStationId by remember { mutableStateOf<Long?>(null) }
     var addPoint by remember { mutableStateOf<Point?>(null) }
+    // Станции, о которых уже уведомили в этой сессии (чтобы не спамить).
+    val notifiedStations = remember { mutableSetOf<Long>() }
+
+    /**
+     * Проверяет избранные АЗС с нужным топливом в радиусе и шлёт локальное уведомление.
+     * Полностью on-device: используется текущая геопозиция и локальные метки.
+     */
+    fun checkGeoNotifications(lat: Double, lng: Double) {
+        val s = settings
+        val fuel = s.preferredFuel
+        if (!s.geoNotifyEnabled || fuel == null) return
+        markers.forEach { marker ->
+            val st = marker.station.station
+            if (!favorites.contains(st.id)) return@forEach
+            val item = marker.station.currentMark?.items
+                ?.firstOrNull { it.type == fuel && it.available } ?: return@forEach
+            val dist = GeoUtils.distanceMeters(lat, lng, st.lat, st.lng)
+            if (dist <= s.markRadiusMeters && notifiedStations.add(st.id)) {
+                Notifications.notifyNearby(
+                    context, st.id, st.name,
+                    "${fuel.title} есть · %.2f ₽ · %d м".format(item.price, dist.toInt())
+                )
+            }
+        }
+    }
 
     fun locate() {
         scope.launch {
@@ -105,6 +133,7 @@ fun MapScreen(
                 val p = Point(loc.latitude, loc.longitude)
                 userPoint = p
                 focusPoint = p
+                checkGeoNotifications(loc.latitude, loc.longitude)
             } else {
                 snackbar.showSnackbar("Не удалось определить геолокацию")
             }

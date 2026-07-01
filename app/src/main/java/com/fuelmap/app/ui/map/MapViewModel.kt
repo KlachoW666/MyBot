@@ -8,6 +8,7 @@ import com.fuelmap.app.data.local.UserEntity
 import com.fuelmap.app.data.repository.AuthRepository
 import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.StationRepository
+import com.fuelmap.app.data.settings.AppSettings
 import com.fuelmap.app.data.settings.SettingsManager
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
@@ -51,6 +52,9 @@ class MapViewModel(
 
     val currentUser: StateFlow<UserEntity?> =
         authRepo.currentUser.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val appSettings: StateFlow<AppSettings> =
+        settings.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val favorites: StateFlow<Set<Long>> =

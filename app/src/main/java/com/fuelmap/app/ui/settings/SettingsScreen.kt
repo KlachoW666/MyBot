@@ -1,5 +1,9 @@
 package com.fuelmap.app.ui.settings
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,6 +55,18 @@ fun SettingsScreen(
 ) {
     val settings by vm.state.collectAsStateWithLifecycle()
     var fuelExpanded by remember { mutableStateOf(false) }
+
+    val notifyPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> vm.setGeoNotify(granted) }
+
+    fun onGeoNotifyChange(enabled: Boolean) {
+        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            vm.setGeoNotify(enabled)
+        }
+    }
 
     Scaffold(topBar = {
         TopAppBar(
@@ -123,7 +139,7 @@ fun SettingsScreen(
             SettingCard("Гео-уведомления") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Уведомлять о топливе рядом", style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = settings.geoNotifyEnabled, onCheckedChange = { vm.setGeoNotify(it) })
+                    Switch(checked = settings.geoNotifyEnabled, onCheckedChange = { onGeoNotifyChange(it) })
                 }
                 Text(
                     "Пуш о наличии нужного топлива на избранных АЗС поблизости.",
