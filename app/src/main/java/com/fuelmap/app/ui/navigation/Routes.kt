@@ -8,6 +8,7 @@ object Routes {
     const val RESET = "reset"
     const val PROFILE = "profile"
     const val LEADERBOARD = "leaderboard"
+    const val SETTINGS = "settings"
 
     const val STATION = "station/{stationId}"
     fun station(id: Long) = "station/$id"

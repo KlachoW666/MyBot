@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalGasStation
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -51,6 +52,7 @@ import com.fuelmap.app.ui.common.SupportFooter
 fun ProfileScreen(
     onLogin: () -> Unit,
     onRegister: () -> Unit,
+    onSettings: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     vm: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -65,6 +67,11 @@ fun ProfileScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
+                }
+            },
+            actions = {
+                IconButton(onClick = onSettings) {
+                    Icon(Icons.Filled.Settings, contentDescription = "Настройки")
                 }
             }
         )

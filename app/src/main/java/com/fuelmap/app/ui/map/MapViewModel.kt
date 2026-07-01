@@ -8,6 +8,7 @@ import com.fuelmap.app.data.local.UserEntity
 import com.fuelmap.app.data.repository.AuthRepository
 import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.StationRepository
+import com.fuelmap.app.data.settings.SettingsManager
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.domain.model.StationStatus
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -33,11 +35,19 @@ data class CameraState(val lat: Double, val lng: Double, val zoom: Float)
 class MapViewModel(
     private val repo: StationRepository,
     private val authRepo: AuthRepository,
-    private val favoriteRepo: FavoriteRepository
+    private val favoriteRepo: FavoriteRepository,
+    private val settings: SettingsManager
 ) : ViewModel() {
 
     /** Активный фильтр по типу топлива (null = показывать все). */
     val fuelFilter = MutableStateFlow<FuelType?>(null)
+
+    init {
+        // Значение по умолчанию — предпочитаемое топливо из настроек.
+        viewModelScope.launch {
+            settings.settings.first().preferredFuel?.let { fuelFilter.value = it }
+        }
+    }
 
     val currentUser: StateFlow<UserEntity?> =
         authRepo.currentUser.stateIn(viewModelScope, SharingStarted.Eagerly, null)

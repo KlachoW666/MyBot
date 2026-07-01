@@ -11,6 +11,7 @@ import com.fuelmap.app.ui.leaderboard.LeaderboardViewModel
 import com.fuelmap.app.ui.map.MapViewModel
 import com.fuelmap.app.ui.nearby.NearbyViewModel
 import com.fuelmap.app.ui.profile.ProfileViewModel
+import com.fuelmap.app.ui.settings.SettingsViewModel
 import com.fuelmap.app.ui.station.StationViewModel
 
 fun CreationExtras.app(): FuelMapApplication =
@@ -23,7 +24,8 @@ object AppViewModelProvider {
             MapViewModel(
                 app().container.stationRepository,
                 app().container.authRepository,
-                app().container.favoriteRepository
+                app().container.favoriteRepository,
+                app().container.settingsManager
             )
         }
         initializer {
@@ -31,7 +33,8 @@ object AppViewModelProvider {
                 app().container.stationRepository,
                 app().container.markRepository,
                 app().container.authRepository,
-                app().container.favoriteRepository
+                app().container.favoriteRepository,
+                app().container.settingsManager
             )
         }
         initializer {
@@ -40,6 +43,7 @@ object AppViewModelProvider {
                 app().container.markRepository
             )
         }
+        initializer { SettingsViewModel(app().container.settingsManager) }
         initializer {
             NearbyViewModel(
                 app().container.stationRepository,

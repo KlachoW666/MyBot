@@ -9,6 +9,7 @@ import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.FuelEntry
 import com.fuelmap.app.data.repository.MarkRepository
 import com.fuelmap.app.data.repository.StationRepository
+import com.fuelmap.app.data.settings.SettingsManager
 import com.fuelmap.app.domain.model.ConfirmationType
 import com.fuelmap.app.domain.model.Queue
 import com.fuelmap.app.util.GeoUtils
@@ -16,6 +17,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -25,7 +27,8 @@ class StationViewModel(
     private val stationRepo: StationRepository,
     private val markRepo: MarkRepository,
     private val authRepo: AuthRepository,
-    private val favoriteRepo: FavoriteRepository
+    private val favoriteRepo: FavoriteRepository,
+    private val settings: SettingsManager
 ) : ViewModel() {
 
     val currentUser: StateFlow<UserEntity?> =
@@ -92,7 +95,8 @@ class StationViewModel(
                     return@launch
                 }
                 val distance = GeoUtils.distanceMeters(userLat, userLng, station.lat, station.lng)
-                if (distance > MAX_MARK_DISTANCE_METERS) {
+                val radius = settings.settings.first().markRadiusMeters
+                if (distance > radius) {
                     _message.value = "Вы слишком далеко от АЗС (%.1f км). Отметку можно ставить только рядом с заправкой."
                         .format(distance / 1000.0)
                     return@launch

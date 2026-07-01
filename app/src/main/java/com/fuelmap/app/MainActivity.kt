@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -14,6 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.fuelmap.app.data.settings.AppSettings
+import com.fuelmap.app.data.settings.ThemeMode
 import com.fuelmap.app.ui.navigation.NavGraph
 import com.fuelmap.app.ui.onboarding.OnboardingScreen
 import com.fuelmap.app.ui.theme.FuelMapTheme
@@ -31,7 +34,13 @@ class MainActivity : ComponentActivity() {
         val container = (application as FuelMapApplication).container
 
         setContent {
-            FuelMapTheme {
+            val settings by container.settingsManager.settings.collectAsState(initial = AppSettings())
+            val darkTheme = when (settings.themeMode) {
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            FuelMapTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

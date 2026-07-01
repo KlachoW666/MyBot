@@ -8,11 +8,13 @@ import com.fuelmap.app.data.repository.FavoriteRepository
 import com.fuelmap.app.data.repository.MarkRepository
 import com.fuelmap.app.data.repository.StationRepository
 import com.fuelmap.app.data.session.SessionManager
+import com.fuelmap.app.data.settings.SettingsManager
 
 /** Простой ручной контейнер зависимостей (без Hilt). */
 class AppContainer(context: Context) {
     private val db = AppDatabase.get(context)
     val session = SessionManager(context)
+    val settingsManager = SettingsManager(context)
 
     val authRepository = AuthRepository(db.userDao(), session)
     val stationRepository = StationRepository(db.stationDao(), db.regionDao())
