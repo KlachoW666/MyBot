@@ -38,7 +38,8 @@ else envText = rawEnv.toString('utf8');
 envText = envText.replace(/^﻿/, '');
 
 const foundKeys = [];
-for (const line of envText.split('\n')) {
+// Разделители строк: \r\n (Windows), \n (Unix), одиночный \r (старые редакторы).
+for (const line of envText.split(/\r\n|\r|\n/)) {
   const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)$/);
   if (!match) continue;
   // Инлайн-комментарии и пробелы не часть значения.
