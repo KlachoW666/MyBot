@@ -1,7 +1,5 @@
 import { config } from '../config.js';
 
-const API_BASE = 'https://api.telegram.org';
-
 /** Ошибка Bot API с разбором кода, описания и retry_after. */
 export class TelegramApiError extends Error {
   constructor(method, errorCode, description, parameters = {}) {
@@ -38,7 +36,7 @@ export class TelegramApiError extends Error {
  * 429 уважает parameters.retry_after (с потолком maxRetryAfter).
  */
 async function call(method, payload = {}, { retries = 3, maxRetryAfter = 15 } = {}) {
-  const url = `${API_BASE}/bot${config.botToken}/${method}`;
+  const url = `${config.telegramApiBase}/bot${config.botToken}/${method}`;
 
   for (let attempt = 0; ; attempt++) {
     let error;
@@ -102,6 +100,24 @@ export async function createInvoiceLink({ title, description, payload, amountSta
     currency: 'XTR',
     prices: [{ label: title, amount: amountStars }],
   });
+}
+
+/** Ответ на pre_checkout_query — Telegram ждёт его не дольше 10 секунд. */
+export async function answerPreCheckoutQuery({ queryId, ok, errorMessage }) {
+  return call('answerPreCheckoutQuery', {
+    pre_checkout_query_id: queryId,
+    ok,
+    ...(ok ? {} : { error_message: errorMessage ?? 'Платёж отклонён' }),
+  }, { retries: 1 });
+}
+
+/** Текстовое сообщение (подтверждения пополнений, /start). */
+export async function sendMessage({ chatId, text, replyMarkup }) {
+  return call('sendMessage', {
+    chat_id: chatId,
+    text,
+    ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+  }, { retries: 1 });
 }
 
 /** Настройка вебхука: только HTTPS + secret_token. */

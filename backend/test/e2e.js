@@ -15,10 +15,7 @@ process.env.WEBHOOK_SECRET ??= 'e2e-webhook-secret';
 process.env.JWT_SECRET ??= 'e2e-jwt-secret';
 process.env.DATABASE_URL ??= 'postgres://mybot@localhost:5432/mybot';
 process.env.REDIS_URL ??= 'redis://localhost:6379';
-// grammY не ходит через глобальный fetch — отдаём botInfo, чтобы он не звал getMe.
-process.env.BOT_INFO = JSON.stringify({ id: 42, is_bot: true, first_name: 'e2e',
-  username: 'e2e_bot', can_join_groups: false, can_read_all_group_messages: false,
-  supports_inline_queries: false, can_connect_to_business: false, has_main_web_app: true });
+process.env.ADMIN_IDS = '8486449177';
 
 // ---------------------------------------------------------- стаб Bot API
 const FAKE_GIFTS = [
@@ -39,9 +36,9 @@ globalThis.fetch = async (url, options) => {
     new Response(JSON.stringify(payload), { status });
 
   switch (method) {
-    case 'getMe':
-      return reply({ ok: true, result: { id: 42, is_bot: true, username: 'e2e_bot',
-        can_join_groups: false, can_read_all_group_messages: false, supports_inline_queries: false } });
+    case 'answerPreCheckoutQuery':
+    case 'sendMessage':
+      return reply({ ok: true, result: true });
     case 'getAvailableGifts':
       return reply({ ok: true, result: { gifts: FAKE_GIFTS } });
     case 'createInvoiceLink':
@@ -181,7 +178,65 @@ res = await server.inject({ method: 'POST', url: '/bot/webhook',
   payload: { update_id: 1 } });
 assert.equal(res.statusCode, 200);
 
-console.log('E2E OK: auth, catalog, invoice, open (idempotent), withdraw (429 retry / refund), webhook secret');
+// 9. Оплата через вебхук: pre_checkout + successful_payment → зачисление.
+const paidPayload = JSON.stringify({ t: 'topup', uid: 777, amt: 250, n: 'e2e' });
+const paidFrom = { id: 777, is_bot: false, first_name: 'E2E', username: 'e2e_user' };
+res = await server.inject({ method: 'POST', url: '/bot/webhook',
+  headers: { 'content-type': 'application/json',
+    'x-telegram-bot-api-secret-token': process.env.WEBHOOK_SECRET },
+  payload: { update_id: 3, message: {
+    message_id: 9, date: Math.floor(Date.now() / 1000),
+    chat: { id: 777, type: 'private' }, from: paidFrom,
+    successful_payment: { currency: 'XTR', total_amount: 250, invoice_payload: paidPayload,
+      telegram_payment_charge_id: 'chg-webhook-1' } } } });
+assert.equal(res.statusCode, 200);
+const { rows: [afterPay] } = await pool.query('SELECT balance FROM users WHERE telegram_id = 777');
+const balanceBeforePay = opened.gift.gift_id === 'gift-rare' ? 500 : 400;
+assert.equal(Number(afterPay.balance), balanceBeforePay + 250, 'webhook payment credited');
+
+// Платёж от юзера, которого ещё НЕТ в БД (никогда не открывал апп) — должен создать его.
+const freshFrom = { id: 555000111, is_bot: false, first_name: 'Fresh' };
+res = await server.inject({ method: 'POST', url: '/bot/webhook',
+  headers: { 'content-type': 'application/json',
+    'x-telegram-bot-api-secret-token': process.env.WEBHOOK_SECRET },
+  payload: { update_id: 4, message: {
+    message_id: 10, date: Math.floor(Date.now() / 1000),
+    chat: { id: 555000111, type: 'private' }, from: freshFrom,
+    successful_payment: { currency: 'XTR', total_amount: 77,
+      invoice_payload: JSON.stringify({ t: 'topup', uid: 555000111, amt: 77, n: 'x' }),
+      telegram_payment_charge_id: 'chg-fresh-1' } } } });
+assert.equal(res.statusCode, 200);
+const { rows: [freshUser] } = await pool.query('SELECT balance FROM users WHERE telegram_id = 555000111');
+assert.ok(freshUser, 'payment must create unknown user');
+assert.equal(Number(freshUser.balance), 77, 'fresh user credited');
+
+// 10. Админка: обычный юзер → 403; админ (8486449177) — статы и корректировка баланса.
+res = await inject({ method: 'GET', url: '/admin/stats' }, token);
+assert.equal(res.statusCode, 403, 'non-admin must be rejected');
+
+res = await inject({ method: 'POST', url: '/auth', payload: { initData: makeInitData(8486449177) } });
+const adminToken = res.json().token;
+assert.equal(res.json().user.is_admin, true);
+
+res = await inject({ method: 'GET', url: '/admin/stats' }, adminToken);
+assert.equal(res.statusCode, 200, res.body);
+assert.ok(res.json().users >= 2);
+
+res = await inject({ method: 'POST', url: '/admin/balance',
+  payload: { telegram_id: 8486449177, amount: 1000 } }, adminToken);
+assert.equal(res.statusCode, 200, res.body);
+assert.equal(res.json().balance, 1000);
+
+// Шестой активный кейс — отказ (на экран помещается максимум 5).
+for (let i = 0; i < 5; i++) {
+  res = await inject({ method: 'POST', url: '/admin/cases', payload: {
+    slug: `extra-${i}`, title: `Extra ${i}`, price_stars: 10,
+    items: [{ gift_id: 'gift-cheap', weight: 1 }] } }, adminToken);
+  if (i < 4) assert.equal(res.statusCode, 200, res.body); // + кейс 'e2e' = 5 активных
+  else assert.equal(res.statusCode, 409, 'sixth active case must be rejected');
+}
+
+console.log('E2E OK: auth, catalog, invoice, open (idempotent), withdraw (429 retry / refund), webhook secret, payment credit, admin guard + 5-case limit');
 await server.close();
 await pool.end();
 redis.disconnect();

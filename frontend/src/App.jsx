@@ -1,18 +1,20 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { auth, getCases, getMe } from './api.js';
-import { CaseCard } from './components/CaseCard.jsx';
-import { CaseOpenModal } from './components/CaseOpenModal.jsx';
-import { Inventory } from './components/Inventory.jsx';
-import { TopUp } from './components/TopUp.jsx';
+import { CasesScreen } from './screens/CasesScreen.jsx';
+import { ProfileScreen } from './screens/ProfileScreen.jsx';
+import { AdminScreen } from './screens/AdminScreen.jsx';
+import { TabBar } from './components/TabBar.jsx';
+import { BalancePill } from './components/BalancePill.jsx';
+import { TopUpSheet } from './components/TopUpSheet.jsx';
 
 export function App() {
   const [user, setUser] = useState(null);
   const [cases, setCases] = useState([]);
   const [tab, setTab] = useState('cases');
-  const [openingCase, setOpeningCase] = useState(null);
+  const [topUpOpen, setTopUpOpen] = useState(false);
   const [error, setError] = useState(null);
 
-  const refreshBalance = useCallback(async () => {
+  const refresh = useCallback(async () => {
     const me = await getMe();
     setUser(me);
   }, []);
@@ -20,9 +22,9 @@ export function App() {
   useEffect(() => {
     (async () => {
       try {
-        const me = await auth();               // initData → JWT
+        await auth();              // initData → JWT
+        const [me, { cases }] = await Promise.all([getMe(), getCases()]);
         setUser(me);
-        const { cases } = await getCases();
         setCases(cases);
       } catch (err) {
         setError(err.message);
@@ -30,41 +32,50 @@ export function App() {
     })();
   }, []);
 
-  if (error) return <div className="screen-msg">⚠️ {error}</div>;
-  if (!user) return <div className="screen-msg">Загрузка…</div>;
+  if (error) {
+    return (
+      <div className="boot">
+        <div className="boot-logo">🎁</div>
+        <p className="boot-error">{error}</p>
+      </div>
+    );
+  }
+  if (!user) {
+    return (
+      <div className="boot">
+        <div className="boot-logo pulse">🎁</div>
+        <p>Загрузка…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
       <header className="header">
-        <span className="hello">👋 {user.first_name ?? user.username ?? user.telegram_id}</span>
-        <span className="balance">{user.balance} ⭐</span>
+        <div className="brand">
+          <span className="brand-icon">🎁</span>
+          <span className="brand-name">Gift Cases</span>
+        </div>
+        <BalancePill balance={user.balance} onClick={() => setTopUpOpen(true)} />
       </header>
 
-      {tab === 'cases' && (
-        <main className="grid">
-          {cases.map((c) => (
-            <CaseCard key={c.id} caseData={c} onOpen={() => setOpeningCase(c)} />
-          ))}
-          {cases.length === 0 && <div className="screen-msg">Кейсы скоро появятся</div>}
-        </main>
-      )}
-      {tab === 'inventory' && <Inventory onBalanceChange={refreshBalance} />}
-      {tab === 'topup' && <TopUp onPaid={refreshBalance} />}
+      <div className="screen">
+        {tab === 'cases' && (
+          <CasesScreen
+            cases={cases}
+            user={user}
+            onBalanceChange={(balance) => setUser((u) => ({ ...u, balance }))}
+            onRefresh={refresh}
+            onTopUp={() => setTopUpOpen(true)}
+          />
+        )}
+        {tab === 'profile' && <ProfileScreen user={user} onRefresh={refresh} />}
+        {tab === 'admin' && user.is_admin && <AdminScreen user={user} onRefresh={refresh} />}
+      </div>
 
-      {openingCase && (
-        <CaseOpenModal
-          caseData={openingCase}
-          balance={user.balance}
-          onClose={() => setOpeningCase(null)}
-          onResult={(result) => setUser((u) => ({ ...u, balance: result.balance }))}
-        />
-      )}
+      <TabBar tab={tab} onChange={setTab} isAdmin={user.is_admin} />
 
-      <nav className="tabs">
-        <button className={tab === 'cases' ? 'active' : ''} onClick={() => setTab('cases')}>🎁 Кейсы</button>
-        <button className={tab === 'inventory' ? 'active' : ''} onClick={() => setTab('inventory')}>📦 Инвентарь</button>
-        <button className={tab === 'topup' ? 'active' : ''} onClick={() => setTab('topup')}>⭐ Пополнить</button>
-      </nav>
+      {topUpOpen && <TopUpSheet onClose={() => setTopUpOpen(false)} onPaid={refresh} />}
     </div>
   );
 }

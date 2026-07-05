@@ -41,6 +41,7 @@ export default async function authRoutes(fastify) {
         username: dbUser.username,
         first_name: dbUser.first_name,
         balance: Number(dbUser.balance),
+        is_admin: config.adminIds.includes(user.id),
       },
     };
   });

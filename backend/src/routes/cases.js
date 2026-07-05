@@ -18,7 +18,8 @@ export default async function casesRoutes(fastify) {
        LEFT JOIN gifts_catalog gc ON gc.gift_id = ci.gift_id AND gc.is_available
        WHERE c.is_active
        GROUP BY c.id
-       ORDER BY c.price_stars`,
+       ORDER BY c.price_stars
+       LIMIT 5`,
     );
     return { cases: rows };
   });

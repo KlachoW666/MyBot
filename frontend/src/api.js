@@ -55,3 +55,13 @@ export const createInvoice = (amountStars) =>
 
 export const withdraw = (inventoryId) =>
   request('/withdraw', { method: 'POST', body: { inventoryId } });
+
+// --- Админка (доступна только ID из ADMIN_IDS, сервер проверяет сам) ---
+export const adminStats = () => request('/admin/stats');
+export const adminCases = () => request('/admin/cases');
+export const adminSaveCase = (payload) => request('/admin/cases', { method: 'POST', body: payload });
+export const adminToggleCase = (id) => request(`/admin/cases/${id}/toggle`, { method: 'POST' });
+export const adminRefreshCatalog = () => request('/admin/catalog/refresh', { method: 'POST' });
+export const adminWithdrawals = () => request('/admin/withdrawals');
+export const adminAdjustBalance = (telegramId, amount) =>
+  request('/admin/balance', { method: 'POST', body: { telegram_id: telegramId, amount } });

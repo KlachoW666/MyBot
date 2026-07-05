@@ -2,105 +2,132 @@
 
 Мини-приложение «открытие кейсов с подарками» внутри Telegram WebApp.
 
-- **Frontend**: React + Vite (Telegram Mini App)
-- **Backend**: Node.js + Fastify
-- **Бот**: grammY (webhook, встроен в backend)
-- **БД**: PostgreSQL, **кэш/локи**: Redis
+- **Frontend**: React + Vite, тёмный премиум-дизайн, до **5 кейсов на одном экране**
+- **Backend**: Node.js + Fastify (вебхук бота встроен, без polling)
+- **БД**: PostgreSQL, **кэш/локи/рейт-лимиты**: Redis
 - **Оплата**: Telegram Stars (XTR), **призы**: Telegram Gifts (`sendGift`)
+- **Админка**: встроена в апп, доступ по `ADMIN_IDS` (по умолчанию `8486449177`)
 
 ## Структура проекта
 
 ```
 .
 ├── backend/
-│   ├── db/
-│   │   └── schema.sql            # Схема PostgreSQL
+│   ├── db/schema.sql                  # Схема PostgreSQL
+│   ├── dev/telegram-emulator.js       # Локальный эмулятор Bot API (+ /emu/pay)
 │   ├── scripts/
-│   │   ├── migrate.js            # Применение schema.sql
-│   │   ├── seed.js               # Кейсы из живого каталога подарков
-│   │   └── set-webhook.js        # setWebhook с secret_token
+│   │   ├── migrate.js                 # Применение schema.sql
+│   │   ├── seed.js                    # 5 кейсов из живого каталога подарков
+│   │   └── set-webhook.js             # setWebhook с secret_token
 │   ├── src/
-│   │   ├── index.js              # Точка входа
-│   │   ├── server.js             # Сборка Fastify-приложения
-│   │   ├── config.js             # Конфиг из env
-│   │   ├── bot.js                # grammY: pre_checkout_query, successful_payment
-│   │   ├── db/pool.js            # pg Pool + helper транзакций
-│   │   ├── redis.js              # ioredis + распределённый лок
+│   │   ├── index.js                   # Точка входа
+│   │   ├── server.js                  # Сборка Fastify-приложения
+│   │   ├── config.js                  # Конфиг из env (ADMIN_IDS, TELEGRAM_API_BASE, ...)
+│   │   ├── bot.js                     # Обработчик апдейтов: /start, pre_checkout, платежи
+│   │   ├── db/pool.js                 # pg Pool + helper транзакций
+│   │   ├── redis.js                   # ioredis + распределённый лок
 │   │   ├── lib/
-│   │   │   ├── validate-init-data.js  # HMAC-валидация initData
-│   │   │   ├── telegram-api.js        # Клиент Bot API (getAvailableGifts, sendGift, createInvoiceLink)
+│   │   │   ├── validate-init-data.js  # HMAC-валидация initData (+ auth_date ≤ 1ч)
+│   │   │   ├── telegram-api.js        # Клиент Bot API: getAvailableGifts, sendGift,
+│   │   │   │                          #   createInvoiceLink, answerPreCheckoutQuery...
+│   │   │   ├── rng.js                 # CSPRNG по весам (crypto.randomInt)
 │   │   │   └── errors.js              # AppError → HTTP-ответы
-│   │   ├── plugins/
-│   │   │   └── auth.js           # JWT-декоратор (fastify.authenticate)
+│   │   ├── plugins/auth.js            # JWT (authenticate) + requireAdmin
 │   │   ├── services/
-│   │   │   ├── catalog.js        # Каталог подарков: Redis-кэш + снапшот в БД
-│   │   │   ├── case-opening.js   # Серверный RNG по весам, транзакция открытия
-│   │   │   ├── payments.js       # Инвойсы Stars, зачисление баланса
-│   │   │   └── withdrawals.js    # Вывод подарка: лок, sendGift, ретраи, рефанд
+│   │   │   ├── catalog.js             # Redis-кэш каталога + снапшот в БД
+│   │   │   ├── case-opening.js        # Транзакция открытия, идемпотентность
+│   │   │   ├── payments.js            # Инвойсы XTR, идемпотентное зачисление
+│   │   │   └── withdrawals.js         # Лок + статусная машина + ретраи/рефанд
 │   │   └── routes/
-│   │       ├── auth.js           # POST /auth
-│   │       ├── catalog.js        # GET  /catalog
-│   │       ├── cases.js          # GET  /cases, GET /cases/:id, POST /cases/:id/open
-│   │       ├── pay.js            # POST /pay/invoice
-│   │       ├── withdraw.js       # POST /withdraw
-│   │       ├── me.js             # GET  /me, GET /me/inventory
-│   │       └── webhook.js        # POST /bot/webhook (secret_token)
-│   └── package.json
+│   │       ├── auth.js                # POST /auth
+│   │       ├── catalog.js             # GET  /catalog
+│   │       ├── cases.js               # GET  /cases, POST /cases/:id/open
+│   │       ├── pay.js                 # POST /pay/invoice
+│   │       ├── withdraw.js            # POST /withdraw
+│   │       ├── me.js                  # GET  /me, /me/inventory
+│   │       ├── admin.js               # /admin/*: статы, кейсы, каталог, начисления
+│   │       └── webhook.js             # POST /bot/webhook (secret_token, timing-safe)
+│   └── test/                          # unit (initData, RNG) + e2e (все флоу)
 ├── frontend/
+│   ├── dev/ui-test.mjs                # Playwright-прогон всех экранов (скриншоты)
 │   ├── src/
-│   │   ├── main.jsx
-│   │   ├── App.jsx
-│   │   ├── telegram.js           # Обёртка window.Telegram.WebApp
-│   │   ├── api.js                # HTTP-клиент с JWT
-│   │   ├── components/
-│   │   │   ├── CaseCard.jsx
-│   │   │   ├── CaseOpenModal.jsx # Анимация по ответу сервера
-│   │   │   ├── Inventory.jsx
-│   │   │   └── TopUp.jsx
-│   │   └── styles.css
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-├── docker-compose.yml
+│   │   ├── App.jsx                    # Авторизация, табы, баланс
+│   │   ├── telegram.js                # Обёртка WebApp (initData, openInvoice, haptics)
+│   │   ├── api.js                     # HTTP-клиент с JWT + admin API
+│   │   ├── screens/
+│   │   │   ├── CasesScreen.jsx        # 5 кейсов: hero + сетка 2×2, один вьюпорт
+│   │   │   ├── ProfileScreen.jsx      # Аватар, статы, инвентарь, вывод
+│   │   │   └── AdminScreen.jsx        # Статы, кейсы on/off, каталог, начисление ⭐
+│   │   └── components/                # CaseCard, OpenOverlay (рулетка), TopUpSheet,
+│   │                                  #   InventoryList, TabBar, BalancePill
+│   └── ...
+├── docker-compose.yml                 # postgres + redis
 └── .env.example
 ```
 
-## Запуск
+## Быстрый старт (production)
 
 ```bash
-cp .env.example .env            # заполнить BOT_TOKEN и секреты
+cp .env.example backend/.env      # BOT_TOKEN, JWT_SECRET, WEBHOOK_SECRET, PUBLIC_URL
 docker compose up -d postgres redis
 
 cd backend
 npm install
-npm run migrate                 # применить db/schema.sql
-npm run seed                    # создать кейсы из живого каталога подарков
-npm run dev                     # API на :8080
+npm run migrate
+npm run seed                      # 5 кейсов из живого getAvailableGifts
+npm start                         # API + вебхук на :8080
 
 cd ../frontend
-npm install
-npm run dev                     # WebApp на :5173 (проксирует /api на :8080)
+npm install && npm run build      # раздать dist/ с того же домена (path /, api → /api)
+
+cd ../backend && npm run set-webhook   # HTTPS-вебхук с secret_token
 ```
 
-Webhook бота (после деплоя за HTTPS):
+В @BotFather: **Bot Settings → Menu Button** (или Main Mini App) → URL фронтенда.
+
+## Локальная разработка без Telegram
+
+Реальный Bot API заменяется эмулятором:
 
 ```bash
-cd backend && npm run set-webhook   # setWebhook(PUBLIC_URL/bot/webhook, secret_token=WEBHOOK_SECRET)
+cd backend
+TELEGRAM_API_BASE=http://localhost:8081 npm run dev   # backend
+node dev/telegram-emulator.js                          # фейковый Bot API + /emu/pay
+cd ../frontend && npm run dev                          # WebApp на :5173
+
+# эмуляция оплаты Stars (полный цикл через вебхук):
+curl -X POST localhost:8081/emu/pay -H 'content-type: application/json' \
+  -d '{"user_id": 8486449177, "amount": 1000}'
+
+# UI-прогон с реально подписанным initData + скриншоты:
+cd frontend && BOT_TOKEN=<токен> OUT=./shots node dev/ui-test.mjs
 ```
 
-## Поток данных
+## Ключевые инварианты
 
-1. **Auth**: фронт шлёт `window.Telegram.WebApp.initData` → backend проверяет
-   HMAC (`secret = HMAC_SHA256("WebAppData", BOT_TOKEN)`) и `auth_date` (≤ 1 ч) →
-   выдаёт JWT c `telegram_id`. Клиенту не доверяем: все id — только из подписи.
-2. **Каталог**: backend зовёт `getAvailableGifts` → Redis (TTL 10 мин) + снапшот
-   в `gifts_catalog`. `gift_id` не статичны, лимитированные распродаются.
-3. **Открытие**: только сервер. Транзакция: `SELECT ... FOR UPDATE` баланса →
-   списание → `crypto`-RNG по весам среди доступных подарков → запись в
-   `inventory (status=won)`. Клиент получает результат и рисует анимацию.
-4. **Оплата**: `createInvoiceLink(currency=XTR)` → `openInvoice` на фронте →
-   `pre_checkout_query` → `successful_payment` → идемпотентное зачисление
-   по `telegram_payment_charge_id`.
-5. **Вывод**: Redis-лок на предмет → `won → withdraw_pending` в транзакции →
-   `sendGift(gift_id, telegram_id из сессии)` → `withdrawn`.
-   `GIFT_INVALID` → рефанд во внутренний баланс; `429` → авто-ретрай.
+1. **Auth**: только `initData` → HMAC (`secret = HMAC_SHA256("WebAppData", BOT_TOKEN)`),
+   `auth_date` ≤ 1 ч → JWT. Единственный идентификатор — проверенный `telegram_id`.
+2. **Открытие** — только сервер: `FOR UPDATE`-баланс → CSPRNG по весам →
+   `inventory(won)`; идемпотентность по ключу; клиент лишь рисует рулетку
+   по готовому результату.
+3. **Оплата**: `createInvoiceLink(XTR)` → `openInvoice` → вебхук
+   (`pre_checkout_query` → `successful_payment`) → зачисление, идемпотентное
+   по `telegram_payment_charge_id`. Юзер создаётся при первом платеже, если его нет.
+4. **Вывод**: Redis-лок → `won → withdraw_pending` (транзакция) →
+   `sendGift(gift_id, telegram_id)` → `withdrawn`. `GIFT_INVALID` → авто-рефанд
+   в ⭐; `429` → ретрай с `retry_after`; `UNIQUE(inventory_id)` в withdrawals.
+5. **Кейсы**: максимум 5 активных (влезают в один экран) — лимит проверяет сервер.
+6. **Админка** (`ADMIN_IDS`): статистика, вкл/выкл кейсов, upsert кейса с весами,
+   обновление каталога, ручное начисление Stars (журналируется в transactions).
+
+## Тесты
+
+```bash
+cd backend
+npm test               # unit: initData HMAC, weighted RNG
+node test/e2e.js       # против реальных Postgres+Redis (Bot API застаблен):
+                       # auth/подделки, идемпотентное открытие, 429-ретрай,
+                       # GIFT_INVALID-рефанд, дабл-вывод, вебхук-секрет,
+                       # зачисление платежа (в т.ч. новому юзеру), админ-гард,
+                       # лимит 5 кейсов
+```

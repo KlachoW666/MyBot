@@ -50,6 +50,17 @@ export function parseTopUpPayload(rawPayload, { fromId, totalAmount }) {
  */
 export async function creditDeposit({ userId, username, firstName, amountStars, chargeId }) {
   return withTransaction(async (client) => {
+    // Сначала юзер: платить может и тот, кто ни разу не открывал мини-апп.
+    await client.query(
+      `INSERT INTO users (telegram_id, username, first_name)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (telegram_id) DO UPDATE SET
+         username = COALESCE(EXCLUDED.username, users.username),
+         first_name = COALESCE(EXCLUDED.first_name, users.first_name),
+         updated_at = now()`,
+      [userId, username ?? null, firstName ?? null],
+    );
+
     const { rowCount } = await client.query(
       `INSERT INTO transactions (user_id, type, amount, ref, idempotency_key)
        VALUES ($1, 'deposit', $2, $3, $4)
@@ -59,12 +70,8 @@ export async function creditDeposit({ userId, username, firstName, amountStars, 
     if (rowCount === 0) return { duplicate: true }; // уже зачислено
 
     await client.query(
-      `INSERT INTO users (telegram_id, username, first_name, balance)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (telegram_id) DO UPDATE SET
-         balance = users.balance + EXCLUDED.balance,
-         updated_at = now()`,
-      [userId, username ?? null, firstName ?? null, amountStars],
+      `UPDATE users SET balance = balance + $1, updated_at = now() WHERE telegram_id = $2`,
+      [amountStars, userId],
     );
     return { duplicate: false };
   });

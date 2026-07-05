@@ -1,7 +1,7 @@
 /**
- * Сид демо-кейсов из ЖИВОГО каталога подарков (gift_id не статичны,
- * хардкодить их нельзя). Делит доступные подарки на дешёвые/средние/дорогие
- * и собирает 3 кейса: редкие подарки получают меньший вес.
+ * Сид 5 кейсов из ЖИВОГО каталога подарков (gift_id не статичны,
+ * хардкодить их нельзя). Ровно 5 — все помещаются на один экран.
+ * Дорогие подарки получают меньший вес: вес ~ 10000 / star_count.
  */
 import { getCatalog } from '../src/services/catalog.js';
 import { pool } from '../src/db/pool.js';
@@ -14,35 +14,43 @@ if (gifts.length === 0) {
 }
 
 const sorted = [...gifts].sort((a, b) => a.star_count - b.star_count);
-const third = Math.max(1, Math.ceil(sorted.length / 3));
-const tiers = [
-  { slug: 'starter', title: 'Starter Case', pool: sorted.slice(0, third) },
-  { slug: 'silver', title: 'Silver Case', pool: sorted.slice(0, third * 2) },
-  { slug: 'gold', title: 'Gold Case', pool: sorted },
+const slice = (from, to) => {
+  const part = sorted.slice(
+    Math.floor(sorted.length * from), Math.max(Math.floor(sorted.length * to), 1));
+  return part.length > 0 ? part : sorted.slice(0, 1);
+};
+
+const CASES = [
+  { slug: 'starter', title: 'Старт', pool: slice(0, 0.35) },
+  { slug: 'bronze', title: 'Бронза', pool: slice(0, 0.55) },
+  { slug: 'silver', title: 'Серебро', pool: slice(0.2, 0.75) },
+  { slug: 'gold', title: 'Золото', pool: slice(0.4, 1) },
+  { slug: 'legend', title: 'Легенда', pool: slice(0.6, 1) },
 ];
 
-for (const tier of tiers) {
-  // Цена кейса ≈ 90% средней стоимости содержимого (положительное матожидание казны).
-  const avg = tier.pool.reduce((sum, g) => sum + g.star_count, 0) / tier.pool.length;
-  const price = Math.max(1, Math.round(avg * 0.9));
+for (const def of CASES) {
+  // Цена ≈ 90% средневзвешенной стоимости содержимого (маржа казны 10%).
+  const weights = def.pool.map((gift) => Math.max(1, Math.round(10_000 / gift.star_count)));
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  const expected = def.pool.reduce(
+    (sum, gift, i) => sum + gift.star_count * (weights[i] / totalWeight), 0);
+  const price = Math.max(1, Math.round(expected / 0.9));
 
   const { rows: [caseRow] } = await pool.query(
-    `INSERT INTO cases (slug, title, price_stars)
-     VALUES ($1, $2, $3)
+    `INSERT INTO cases (slug, title, price_stars, is_active)
+     VALUES ($1, $2, $3, TRUE)
      ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, price_stars = EXCLUDED.price_stars
      RETURNING id`,
-    [tier.slug, tier.title, price],
+    [def.slug, def.title, price],
   );
   await pool.query('DELETE FROM case_items WHERE case_id = $1', [caseRow.id]);
-  for (const gift of tier.pool) {
-    // Вес обратно пропорционален цене: дорогое падает реже.
-    const weight = Math.max(1, Math.round(10_000 / gift.star_count));
+  for (let i = 0; i < def.pool.length; i++) {
     await pool.query(
       'INSERT INTO case_items (case_id, gift_id, weight) VALUES ($1, $2, $3)',
-      [caseRow.id, gift.gift_id, weight],
+      [caseRow.id, def.pool[i].gift_id, weights[i]],
     );
   }
-  console.log(`case "${tier.title}": ${tier.pool.length} gifts, price ${price} stars`);
+  console.log(`case "${def.title}": ${def.pool.length} gifts, price ${price} ⭐`);
 }
 
 await pool.end();

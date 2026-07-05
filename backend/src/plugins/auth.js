@@ -23,4 +23,12 @@ export default fp(async (fastify) => {
       return reply.status(401).send({ error: 'UNAUTHORIZED', message: 'Invalid or expired token' });
     }
   });
+
+  // Админ-доступ проверяем по конфигу на каждый запрос (не в JWT):
+  // удаление ID из ADMIN_IDS отзывает права сразу, без ожидания истечения токена.
+  fastify.decorate('requireAdmin', async (request, reply) => {
+    if (!config.adminIds.includes(request.userId)) {
+      return reply.status(403).send({ error: 'FORBIDDEN', message: 'Admin only' });
+    }
+  });
 });
