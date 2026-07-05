@@ -1,0 +1,32 @@
+import { pool } from '../db/pool.js';
+
+export default async function meRoutes(fastify) {
+  /** GET /me → профиль и баланс (всегда серверные данные). */
+  fastify.get('/me', { preHandler: [fastify.authenticate] }, async (request) => {
+    const { rows: [user] } = await pool.query(
+      'SELECT telegram_id, username, first_name, balance FROM users WHERE telegram_id = $1',
+      [request.userId],
+    );
+    return {
+      telegram_id: Number(user.telegram_id),
+      username: user.username,
+      first_name: user.first_name,
+      balance: Number(user.balance),
+    };
+  });
+
+  /** GET /me/inventory → выигрыши юзера со статусами. */
+  fastify.get('/me/inventory', { preHandler: [fastify.authenticate] }, async (request) => {
+    const { rows } = await pool.query(
+      `SELECT i.id, i.gift_id, i.star_value, i.status, i.created_at,
+              gc.emoji, gc.sticker_file_id, gc.is_available
+       FROM inventory i
+       JOIN gifts_catalog gc ON gc.gift_id = i.gift_id
+       WHERE i.user_id = $1
+       ORDER BY i.created_at DESC
+       LIMIT 200`,
+      [request.userId],
+    );
+    return { items: rows };
+  });
+}
