@@ -29,21 +29,31 @@ if (!existsSync(envPath)) {
   process.exit(1);
 }
 const { readFileSync } = await import('node:fs');
-// Блокнот/PowerShell пишут UTF-16 или UTF-8 c BOM — учитываем всё.
+// Блокнот/PowerShell пишут UTF-16 (LE/BE) или UTF-8 c BOM — учитываем всё.
 const rawEnv = readFileSync(envPath);
-let envText = rawEnv[0] === 0xff && rawEnv[1] === 0xfe
-  ? rawEnv.toString('utf16le')
-  : rawEnv.toString('utf8');
+let envText;
+if (rawEnv[0] === 0xff && rawEnv[1] === 0xfe) envText = rawEnv.toString('utf16le');
+else if (rawEnv[0] === 0xfe && rawEnv[1] === 0xff) envText = rawEnv.swap16().toString('utf16le');
+else envText = rawEnv.toString('utf8');
 envText = envText.replace(/^﻿/, '');
+
+const foundKeys = [];
 for (const line of envText.split('\n')) {
   const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)$/);
   if (!match) continue;
   // Инлайн-комментарии и пробелы не часть значения.
   const value = match[2].replace(/\s+#.*$/, '').trim();
-  if (value && !(match[1] in process.env)) process.env[match[1]] = value;
+  if (!value) continue;
+  foundKeys.push(match[1]);
+  // Пустая переменная в сессии не должна перекрывать файл.
+  if (!process.env[match[1]]) process.env[match[1]] = value;
 }
 if (!process.env.BOT_TOKEN) {
-  console.error('✗ BOT_TOKEN пуст в backend/.env — возьми у @BotFather (/mybots → API Token)');
+  console.error('✗ BOT_TOKEN пуст — диагностика:');
+  console.error(`  файл: ${envPath}`);
+  console.error(`  первые байты: ${[...rawEnv.slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join(' ')}`);
+  console.error(`  распознанные ключи: ${foundKeys.join(', ') || '(ни одного — файл в неожиданной кодировке?)'}`);
+  console.error(`  BOT_TOKEN в окружении сессии: ${'BOT_TOKEN' in process.env ? `"${process.env.BOT_TOKEN}"` : 'нет'}`);
   process.exit(1);
 }
 process.env.PORT ??= '8080';
