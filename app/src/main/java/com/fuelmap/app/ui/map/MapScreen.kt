@@ -68,6 +68,7 @@ import com.fuelmap.app.util.NavigationLauncher
 import com.fuelmap.app.util.Notifications
 import com.fuelmap.app.util.TimeFormat
 import com.yandex.mapkit.MapKitFactory
+import com.yandex.mapkit.geometry.Circle
 import com.yandex.mapkit.geometry.Point
 import android.graphics.PointF
 import com.yandex.mapkit.map.CameraListener
@@ -230,6 +231,11 @@ fun MapScreen(
                     Text(
                         "🟢 свежее · 🟡 устаревает · ⚪ нет данных · 🔴 нет топлива",
                         style = MaterialTheme.typography.labelSmall
+                    )
+                    Text(
+                        "Цветные зоны — покрытие: чем темнее, тем больше отметок рядом",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         "Удерживайте точку на карте, чтобы добавить АЗС",
@@ -466,6 +472,8 @@ private fun YandexMap(
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
     val map = remember { mapView.mapWindow.map }
+    // Слой «покрытия» добавляется первым, чтобы рисоваться ПОД маркерами.
+    val coverageCollection = remember { map.mapObjects.addCollection() }
     val clusterTapListeners = remember { mutableListOf<ClusterTapListener>() }
     val clusterListener = remember {
         ClusterListener { cluster ->
@@ -550,6 +558,26 @@ private fun YandexMap(
         }
     }
 
+    // «Тепловое» покрытие: полупрозрачные зоны вокруг АЗС с данными.
+    // Чем больше людей отметили/подтвердили — тем плотнее цвет; наложение зон затемняет район.
+    LaunchedEffect(markers) {
+        coverageCollection.clear()
+        markers.forEach { marker ->
+            val mark = marker.station.currentMark ?: return@forEach
+            val color = coverageColor(
+                freshness = marker.freshness,
+                confirms = mark.mark.confirmCount,
+                empties = mark.mark.emptyCount
+            ) ?: return@forEach
+            val circle = coverageCollection.addCircle(
+                Circle(Point(marker.station.station.lat, marker.station.station.lng), COVERAGE_RADIUS_M)
+            )
+            circle.fillColor = color
+            circle.strokeColor = android.graphics.Color.TRANSPARENT
+            circle.strokeWidth = 0f
+        }
+    }
+
     LaunchedEffect(markers, showLabels.value) {
         stationsCollection.clear()
         tapListeners.clear()
@@ -590,6 +618,30 @@ private fun YandexMap(
 private const val LABEL_ZOOM = 14.5f
 private const val CLUSTER_RADIUS = 60.0
 private const val CLUSTER_MIN_ZOOM = 14
+
+/** Радиус зоны покрытия вокруг АЗС, метры. */
+private const val COVERAGE_RADIUS_M = 900f
+
+/**
+ * Цвет заливки зоны покрытия (ARGB) либо null, если данных нет (STALE).
+ * Прозрачность растёт с количеством подтверждений: 1 человек — еле заметно,
+ * много подтверждений — насыщенно. Зелёный — топливо есть, красный — нет.
+ */
+private fun coverageColor(freshness: MarkFreshness, confirms: Int, empties: Int): Int? = when (freshness) {
+    MarkFreshness.FRESH -> {
+        val alpha = (26 + confirms * 16).coerceAtMost(100)
+        android.graphics.Color.argb(alpha, 0x2E, 0xCC, 0x40)
+    }
+    MarkFreshness.AGING -> {
+        val alpha = (16 + confirms * 10).coerceAtMost(70)
+        android.graphics.Color.argb(alpha, 0x2E, 0xCC, 0x40)
+    }
+    MarkFreshness.NO_FUEL -> {
+        val alpha = (18 + empties * 12).coerceAtMost(80)
+        android.graphics.Color.argb(alpha, 0xE5, 0x39, 0x35)
+    }
+    MarkFreshness.STALE -> null
+}
 
 private fun formatPrice(p: Double): String =
     if (p % 1.0 == 0.0) p.toInt().toString() else "%.1f".format(p)
