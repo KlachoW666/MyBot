@@ -71,14 +71,19 @@ globalThis.fetch = async (url, options) => {
 
 // ------------------------------------------------------------- запуск
 const { buildServer } = await import('../src/server.js');
-const { pool } = await import('../src/db/pool.js');
+const { pool, applySchema, dialect } = await import('../src/db/pool.js');
 const { redis } = await import('../src/redis.js');
-const { readFile } = await import('node:fs/promises');
 
 await redis.flushdb();
-await pool.query('DROP TABLE IF EXISTS withdrawals, transactions, inventory, case_items, cases, gifts_catalog, users CASCADE');
-await pool.query('DROP TYPE IF EXISTS inventory_status CASCADE');
-await pool.query(await readFile(new URL('../db/schema.sql', import.meta.url), 'utf8'));
+const TABLES = ['upgrades', 'withdrawals', 'transactions', 'inventory',
+  'case_items', 'cases', 'gifts_catalog', 'users'];
+if (dialect === 'pg') {
+  await pool.query(`DROP TABLE IF EXISTS ${TABLES.join(', ')} CASCADE`);
+  await pool.query('DROP TYPE IF EXISTS inventory_status CASCADE');
+} else {
+  for (const table of TABLES) await pool.query(`DROP TABLE IF EXISTS ${table}`);
+}
+await applySchema();
 
 const server = await buildServer();
 await server.ready();
@@ -115,7 +120,7 @@ assert.ok(token);
 res = await inject({ method: 'GET', url: '/api/catalog' }, token);
 assert.equal(res.statusCode, 200, res.body);
 assert.equal(res.json().gifts.length, 3);
-assert.equal((await pool.query('SELECT count(*) FROM gifts_catalog')).rows[0].count, '3');
+assert.equal(Number((await pool.query('SELECT count(*) AS n FROM gifts_catalog')).rows[0].n), 3);
 
 // 2b. Картинка подарка: getFile → скачивание → кэш; повторный запрос из кэша.
 res = await inject({ method: 'GET', url: '/api/gifts/gift-cheap/image' });
@@ -327,8 +332,8 @@ delete process.env.UPGRADE_FORCE_ROLL;
 
 // Журнал апгрейдов записан.
 const { rows: [{ n: upgradeCount }] } = await pool.query(
-  'SELECT count(*)::int AS n FROM upgrades WHERE user_id = 777');
-assert.equal(upgradeCount, 2);
+  'SELECT count(*) AS n FROM upgrades WHERE user_id = 777');
+assert.equal(Number(upgradeCount), 2);
 
 // 11. /start → приветствие с web_app-кнопкой «Открыть кейсы».
 res = await server.inject({ method: 'POST', url: '/api/bot/webhook',

@@ -1,4 +1,4 @@
-import { pool } from '../db/pool.js';
+import { pool, withTransaction } from '../db/pool.js';
 import { redis } from '../redis.js';
 import { getAvailableGifts } from '../lib/telegram-api.js';
 import { config } from '../config.js';
@@ -62,15 +62,10 @@ export async function markGiftUnavailable(giftId) {
 }
 
 async function saveSnapshot(gifts) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    // Всё, чего нет в свежей выдаче, — распродано/снято.
+  await withTransaction(async (client) => {
+    // Всё, чего нет в свежей выдаче, — распродано/снято (upsert ниже вернёт TRUE).
     await client.query(
-      `UPDATE gifts_catalog SET is_available = FALSE, updated_at = now()
-       WHERE gift_id <> ALL($1::text[])`,
-      [gifts.map((gift) => gift.gift_id)],
-    );
+      'UPDATE gifts_catalog SET is_available = FALSE, updated_at = now()');
     for (const gift of gifts) {
       await client.query(
         `INSERT INTO gifts_catalog
@@ -92,13 +87,7 @@ async function saveSnapshot(gifts) {
          JSON.stringify(gift.raw)],
       );
     }
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
-    throw error;
-  } finally {
-    client.release();
-  }
+  });
 }
 
 async function loadSnapshotFromDb() {
@@ -107,5 +96,9 @@ async function loadSnapshotFromDb() {
             total_count, remaining_count, snapshot AS raw
      FROM gifts_catalog WHERE is_available ORDER BY star_count`,
   );
-  return rows;
+  // SQLite хранит snapshot строкой, PG — jsonb.
+  return rows.map((row) => ({
+    ...row,
+    raw: typeof row.raw === 'string' ? JSON.parse(row.raw) : row.raw,
+  }));
 }

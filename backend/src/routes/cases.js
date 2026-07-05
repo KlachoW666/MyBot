@@ -5,23 +5,24 @@ import { AppError } from '../lib/errors.js';
 export default async function casesRoutes(fastify) {
   /** GET /cases → активные кейсы с содержимым (без весов — шансы не палим). */
   fastify.get('/cases', { preHandler: [fastify.authenticate] }, async () => {
-    const { rows } = await pool.query(
-      `SELECT c.id, c.slug, c.title, c.price_stars,
-              COALESCE(json_agg(json_build_object(
-                'gift_id', gc.gift_id,
-                'emoji', gc.emoji,
-                'sticker_file_id', gc.sticker_file_id,
-                'star_count', gc.star_count
-              ) ORDER BY gc.star_count) FILTER (WHERE gc.gift_id IS NOT NULL), '[]') AS items
-       FROM cases c
-       LEFT JOIN case_items ci ON ci.case_id = c.id
-       LEFT JOIN gifts_catalog gc ON gc.gift_id = ci.gift_id AND gc.is_available
-       WHERE c.is_active
-       GROUP BY c.id
-       ORDER BY c.price_stars
-       LIMIT 5`,
-    );
-    return { cases: rows };
+    const [{ rows: cases }, { rows: items }] = await Promise.all([
+      pool.query(
+        `SELECT id, slug, title, price_stars FROM cases
+         WHERE is_active ORDER BY price_stars LIMIT 5`),
+      pool.query(
+        `SELECT ci.case_id, gc.gift_id, gc.emoji, gc.sticker_file_id, gc.star_count
+         FROM case_items ci
+         JOIN gifts_catalog gc ON gc.gift_id = ci.gift_id
+         WHERE gc.is_available ORDER BY gc.star_count`),
+    ]);
+    return {
+      cases: cases.map((caseRow) => ({
+        ...caseRow,
+        items: items
+          .filter((item) => item.case_id === caseRow.id)
+          .map(({ case_id, ...gift }) => gift),
+      })),
+    };
   });
 
   /** GET /cases/:id */

@@ -1,12 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import pg from 'pg';
+import { applySchema, dialect, pool } from '../src/db/pool.js';
 
-const schemaPath = fileURLToPath(new URL('../db/schema.sql', import.meta.url));
-const sql = await readFile(schemaPath, 'utf8');
-
-const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
-await client.connect();
-await client.query(sql);
-await client.end();
-console.log('schema applied');
+await applySchema();
+console.log(`schema applied (${dialect})`);
+await pool.end();

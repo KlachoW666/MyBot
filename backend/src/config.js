@@ -19,8 +19,10 @@ export const config = {
   sessionTtl: Number(process.env.SESSION_TTL ?? 86_400),
   initDataMaxAge: Number(process.env.INIT_DATA_MAX_AGE ?? 3_600),
 
-  databaseUrl: required('DATABASE_URL'),
-  redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  // По умолчанию — SQLite-файл: локальный запуск без Docker/PostgreSQL.
+  // Для продакшена с несколькими процессами задай postgres://... и redis://...
+  databaseUrl: process.env.DATABASE_URL ?? 'sqlite:data/app.db',
+  redisUrl: process.env.REDIS_URL ?? '',
 
   catalogTtl: Number(process.env.CATALOG_TTL ?? 600),
 

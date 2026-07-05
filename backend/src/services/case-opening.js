@@ -98,7 +98,7 @@ async function findExistingOpen(idemKey) {
     `SELECT i.id AS inventory_id, i.gift_id, i.star_value,
             gc.sticker_file_id, gc.emoji, u.balance
      FROM transactions t
-     JOIN inventory i ON i.id = t.ref::bigint
+     JOIN inventory i ON i.id = CAST(t.ref AS BIGINT)
      JOIN gifts_catalog gc ON gc.gift_id = i.gift_id
      JOIN users u ON u.telegram_id = t.user_id
      WHERE t.idempotency_key = $1`,

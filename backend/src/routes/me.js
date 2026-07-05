@@ -10,9 +10,9 @@ export default async function meRoutes(fastify) {
         [request.userId],
       ),
       pool.query(
-        `SELECT count(*)::int AS opened,
-                COALESCE(sum(star_value), 0)::bigint AS won_stars,
-                count(*) FILTER (WHERE status = 'withdrawn')::int AS withdrawn
+        `SELECT count(*) AS opened,
+                COALESCE(sum(star_value), 0) AS won_stars,
+                count(*) FILTER (WHERE status = 'withdrawn') AS withdrawn
          FROM inventory WHERE user_id = $1`,
         [request.userId],
       ),
@@ -25,9 +25,9 @@ export default async function meRoutes(fastify) {
       created_at: user.created_at,
       is_admin: config.adminIds.includes(request.userId),
       stats: {
-        opened: stats.opened,
+        opened: Number(stats.opened),
         won_stars: Number(stats.won_stars),
-        withdrawn: stats.withdrawn,
+        withdrawn: Number(stats.withdrawn),
       },
     };
   });

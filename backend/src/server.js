@@ -4,7 +4,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
-import { redis } from './redis.js';
+import { redis, isRealRedis } from './redis.js';
 import { errorHandler } from './lib/errors.js';
 import authPlugin from './plugins/auth.js';
 import authRoutes from './routes/auth.js';
@@ -34,8 +34,8 @@ export async function buildServer() {
     global: true,
     max: 120,
     timeWindow: '1 minute',
-    redis,
-    nameSpace: 'rl:',
+    ...(isRealRedis ? { redis, nameSpace: 'rl:' } : {}), // иначе in-memory store
+
     keyGenerator: (request) => (request.userId ? `u:${request.userId}` : `ip:${request.ip}`),
   });
 

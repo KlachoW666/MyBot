@@ -13,41 +13,45 @@ export default async function adminRoutes(fastify) {
   /** GET /admin/stats — сводка по всей системе. */
   fastify.get('/admin/stats', guard, async () => {
     const [users, opens, deposits, withdrawals, inventory] = await Promise.all([
-      pool.query('SELECT count(*)::int AS n, COALESCE(sum(balance),0)::bigint AS total_balance FROM users'),
-      pool.query(`SELECT count(*)::int AS n, COALESCE(-sum(amount),0)::bigint AS stars
+      pool.query('SELECT count(*) AS n, COALESCE(sum(balance),0) AS total_balance FROM users'),
+      pool.query(`SELECT count(*) AS n, COALESCE(-sum(amount),0) AS stars
                   FROM transactions WHERE type = 'case_open'`),
-      pool.query(`SELECT count(*)::int AS n, COALESCE(sum(amount),0)::bigint AS stars
+      pool.query(`SELECT count(*) AS n, COALESCE(sum(amount),0) AS stars
                   FROM transactions WHERE type = 'deposit'`),
-      pool.query(`SELECT status, count(*)::int AS n FROM withdrawals GROUP BY status`),
-      pool.query(`SELECT status, count(*)::int AS n FROM inventory GROUP BY status`),
+      pool.query(`SELECT status, count(*) AS n FROM withdrawals GROUP BY status`),
+      pool.query(`SELECT status, count(*) AS n FROM inventory GROUP BY status`),
     ]);
     return {
-      users: users.rows[0].n,
+      users: Number(users.rows[0].n),
       users_balance: Number(users.rows[0].total_balance),
-      opens: opens.rows[0].n,
+      opens: Number(opens.rows[0].n),
       opens_stars: Number(opens.rows[0].stars),
-      deposits: deposits.rows[0].n,
+      deposits: Number(deposits.rows[0].n),
       deposits_stars: Number(deposits.rows[0].stars),
-      withdrawals: Object.fromEntries(withdrawals.rows.map((row) => [row.status, row.n])),
-      inventory: Object.fromEntries(inventory.rows.map((row) => [row.status, row.n])),
+      withdrawals: Object.fromEntries(withdrawals.rows.map((row) => [row.status, Number(row.n)])),
+      inventory: Object.fromEntries(inventory.rows.map((row) => [row.status, Number(row.n)])),
     };
   });
 
   /** GET /admin/cases — все кейсы (включая выключенные) с весами. */
   fastify.get('/admin/cases', guard, async () => {
-    const { rows } = await pool.query(
-      `SELECT c.id, c.slug, c.title, c.price_stars, c.is_active,
-              COALESCE(json_agg(json_build_object(
-                'gift_id', ci.gift_id, 'weight', ci.weight,
-                'emoji', gc.emoji, 'star_count', gc.star_count,
-                'is_available', gc.is_available
-              ) ORDER BY gc.star_count) FILTER (WHERE ci.id IS NOT NULL), '[]') AS items
-       FROM cases c
-       LEFT JOIN case_items ci ON ci.case_id = c.id
-       LEFT JOIN gifts_catalog gc ON gc.gift_id = ci.gift_id
-       GROUP BY c.id ORDER BY c.price_stars`,
-    );
-    return { cases: rows, max_active: config.maxActiveCases };
+    const [{ rows: cases }, { rows: items }] = await Promise.all([
+      pool.query('SELECT id, slug, title, price_stars, is_active FROM cases ORDER BY price_stars'),
+      pool.query(
+        `SELECT ci.case_id, ci.gift_id, ci.weight, gc.emoji, gc.star_count, gc.is_available
+         FROM case_items ci
+         LEFT JOIN gifts_catalog gc ON gc.gift_id = ci.gift_id
+         ORDER BY gc.star_count`),
+    ]);
+    return {
+      cases: cases.map((caseRow) => ({
+        ...caseRow,
+        items: items
+          .filter((item) => item.case_id === caseRow.id)
+          .map(({ case_id, ...gift }) => gift),
+      })),
+      max_active: config.maxActiveCases,
+    };
   });
 
   /**
@@ -86,8 +90,8 @@ export default async function adminRoutes(fastify) {
     return withTransaction(async (client) => {
       if (is_active) {
         const { rows: [{ n }] } = await client.query(
-          'SELECT count(*)::int AS n FROM cases WHERE is_active AND slug <> $1', [slug]);
-        if (n >= config.maxActiveCases) {
+          'SELECT count(*) AS n FROM cases WHERE is_active AND slug <> $1', [slug]);
+        if (Number(n) >= config.maxActiveCases) {
           throw new AppError(409, 'TOO_MANY_CASES',
             `Максимум ${config.maxActiveCases} активных кейсов (один экран)`);
         }
@@ -124,8 +128,8 @@ export default async function adminRoutes(fastify) {
       if (!caseRow) throw new AppError(404, 'CASE_NOT_FOUND', 'Case not found');
       if (!caseRow.is_active) {
         const { rows: [{ n }] } = await client.query(
-          'SELECT count(*)::int AS n FROM cases WHERE is_active');
-        if (n >= config.maxActiveCases) {
+          'SELECT count(*) AS n FROM cases WHERE is_active');
+        if (Number(n) >= config.maxActiveCases) {
           throw new AppError(409, 'TOO_MANY_CASES',
             `Максимум ${config.maxActiveCases} активных кейсов`);
         }

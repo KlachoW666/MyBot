@@ -42,29 +42,28 @@ process.env.PORT ??= '8080';
 const sh = (cmd, opts = {}) =>
   execSync(cmd, { stdio: 'inherit', cwd: backendDir, ...opts });
 
-// --- postgres + redis ---
-try {
-  sh('docker compose up -d postgres redis --wait', { cwd: rootDir, stdio: 'pipe' });
-  console.log('✓ postgres + redis (docker)');
-} catch {
-  console.log('… docker недоступен — считаю, что Postgres/Redis уже запущены локально');
-}
-
-// --- схема + сид ---
-const { pool } = await import('../src/db/pool.js');
-for (let i = 0; ; i++) {
-  try { await pool.query('SELECT 1'); break; }
-  catch (err) {
-    if (i >= 30) { console.error('✗ Postgres не отвечает:', err.message); process.exit(1); }
-    await new Promise((r) => setTimeout(r, 1000));
+// --- база (по умолчанию SQLite-файл — Docker не нужен) ---
+const { pool, applySchema, dialect } = await import('../src/db/pool.js');
+if (dialect === 'pg') {
+  try {
+    sh('docker compose up -d postgres redis --wait', { cwd: rootDir, stdio: 'pipe' });
+    console.log('✓ postgres + redis (docker)');
+  } catch {
+    console.log('… docker недоступен — считаю, что Postgres/Redis уже запущены локально');
+  }
+  for (let i = 0; ; i++) {
+    try { await pool.query('SELECT 1'); break; }
+    catch (err) {
+      if (i >= 30) { console.error('✗ Postgres не отвечает:', err.message); process.exit(1); }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
   }
 }
-const { readFile } = await import('node:fs/promises');
-await pool.query(await readFile(`${backendDir}/db/schema.sql`, 'utf8'));
-console.log('✓ схема БД');
+await applySchema();
+console.log(`✓ схема БД (${dialect === 'pg' ? 'PostgreSQL' : 'SQLite'})`);
 
-const { rows: [{ n }] } = await pool.query('SELECT count(*)::int AS n FROM cases WHERE is_active');
-if (n === 0) {
+const { rows: [{ n }] } = await pool.query('SELECT count(*) AS n FROM cases WHERE is_active');
+if (Number(n) === 0) {
   sh('node scripts/seed.js');
   console.log('✓ кейсы засеяны из каталога подарков');
 } else {

@@ -67,8 +67,8 @@
 
 ## Проверить в Telegram прямо сейчас — одна команда
 
-Нужны: [Node.js 20+](https://nodejs.org) и [Docker Desktop](https://docker.com)
-(для Postgres/Redis; если они уже установлены локально — Docker не нужен).
+Нужен только [Node.js 20+](https://nodejs.org) — база по умолчанию SQLite (файл
+`backend/data/app.db`), Redis заменён встроенным кэшем. Docker не требуется.
 
 ```bash
 git clone <репозиторий> && cd MyBot

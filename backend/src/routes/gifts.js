@@ -34,7 +34,9 @@ export default async function giftsRoutes(fastify) {
 
     const { rows: [gift] } = await pool.query(
       'SELECT snapshot FROM gifts_catalog WHERE gift_id = $1', [giftId]);
-    const sticker = gift?.snapshot?.sticker;
+    const snapshot = typeof gift?.snapshot === 'string'
+      ? JSON.parse(gift.snapshot) : gift?.snapshot;
+    const sticker = snapshot?.sticker;
     if (!sticker) return reply.status(404).send({ error: 'NOT_FOUND' });
 
     const fileId = sticker.thumbnail?.file_id ?? sticker.file_id;
