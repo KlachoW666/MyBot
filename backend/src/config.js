@@ -32,4 +32,9 @@ export const config = {
 
   // На один экран помещается не больше 5 кейсов — жёсткий предел.
   maxActiveCases: 5,
+
+  // Апгрейд: шанс = from/to в базисных пунктах, клампится в [min, max].
+  // 10⭐ → 100⭐ = 1000 bp = 10%. Пороги: 1% и 75%.
+  upgradeMinBp: Number(process.env.UPGRADE_MIN_BP ?? 100),
+  upgradeMaxBp: Number(process.env.UPGRADE_MAX_BP ?? 7500),
 };

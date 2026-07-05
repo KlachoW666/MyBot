@@ -54,11 +54,13 @@ CREATE INDEX IF NOT EXISTS case_items_case_idx ON case_items (case_id);
 
 -- ------------------------------------------------------------- inventory
 -- Выигрыши. Статусная машина: won → withdraw_pending → withdrawn,
--- либо won/withdraw_pending → refunded (GIFT_INVALID и т.п.).
+-- won/withdraw_pending → refunded (GIFT_INVALID и т.п.),
+-- won → lost (проигранный апгрейд).
 DO $$ BEGIN
     CREATE TYPE inventory_status AS ENUM
-        ('won', 'withdraw_pending', 'withdrawn', 'refunded');
+        ('won', 'withdraw_pending', 'withdrawn', 'refunded', 'lost');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TYPE inventory_status ADD VALUE IF NOT EXISTS 'lost';
 
 CREATE TABLE IF NOT EXISTS inventory (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -104,5 +106,24 @@ CREATE TABLE IF NOT EXISTS withdrawals (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- -------------------------------------------------------------- upgrades
+-- Журнал апгрейдов: предмет ставится против более дорогого подарка,
+-- шанс = from_value / to_value (базисные пункты, клампится 1%..75%).
+-- Ролл и исход — только сервер.
+CREATE TABLE IF NOT EXISTS upgrades (
+    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id       BIGINT NOT NULL REFERENCES users(telegram_id),
+    inventory_id  BIGINT NOT NULL REFERENCES inventory(id),
+    from_gift_id  TEXT   NOT NULL,
+    from_value    INTEGER NOT NULL,
+    to_gift_id    TEXT   NOT NULL,
+    to_value      INTEGER NOT NULL,
+    chance_bp     INTEGER NOT NULL CHECK (chance_bp BETWEEN 1 AND 10000),
+    roll_bp       INTEGER NOT NULL CHECK (roll_bp BETWEEN 0 AND 9999),
+    won           BOOLEAN NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS upgrades_user_idx ON upgrades (user_id, created_at DESC);
 
 COMMIT;

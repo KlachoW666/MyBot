@@ -59,8 +59,22 @@ await page.waitForSelector('.prize-burst', { timeout: 10000 });
 await page.screenshot({ path: `${OUT}/4-reveal.png` });
 await page.click('.btn-ghost');
 
-// Профиль с инвентарём
+// Апгрейд: предмет → цель → форс-выигрыш
 await page.click('.tab >> nth=1');
+await page.waitForSelector('.upgrade-pick', { timeout: 10000 });
+await page.click('.upgrade-pick >> nth=0');
+await page.waitForSelector('.upgrade-slot-full', { timeout: 10000 });
+await page.waitForTimeout(500);
+await page.click('.upgrade-pick >> nth=1');
+await page.waitForTimeout(400);
+await page.screenshot({ path: `${OUT}/10-upgrade.png` });
+await page.click('.btn-big');
+await page.waitForSelector('.upgrade-result', { timeout: 15000 });
+await page.waitForTimeout(300);
+await page.screenshot({ path: `${OUT}/11-upgrade-result.png` });
+
+// Профиль с инвентарём
+await page.click('.tab >> nth=2');
 await page.waitForSelector('.profile-card');
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/5-profile.png` });
@@ -73,13 +87,13 @@ await page.screenshot({ path: `${OUT}/6-topup.png` });
 await page.click('.sheet-backdrop', { position: { x: 10, y: 60 } });
 
 // Админка
-await page.click('.tab >> nth=2');
+await page.click('.tab >> nth=3');
 await page.waitForSelector('.admin-stats', { timeout: 10000 });
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/7-admin.png` });
 
 // Вывод подарка из профиля
-await page.click('.tab >> nth=1');
+await page.click('.tab >> nth=2');
 await page.waitForSelector('.inv-item');
 const btn = page.locator('.inv-item .btn-primary').first();
 if (await btn.count()) {
@@ -90,7 +104,7 @@ if (await btn.count()) {
 }
 
 // Конструктор кейсов в админке
-await page.click('.tab >> nth=2');
+await page.click('.tab >> nth=3');
 await page.waitForSelector('.admin-stats');
 await page.getByText('+ Создать кейс').click();
 await page.waitForSelector('.builder-gifts');

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { auth, getCases, getMe } from './api.js';
 import { CasesScreen } from './screens/CasesScreen.jsx';
+import { UpgradeScreen } from './screens/UpgradeScreen.jsx';
 import { ProfileScreen } from './screens/ProfileScreen.jsx';
 import { AdminScreen } from './screens/AdminScreen.jsx';
 import { TabBar } from './components/TabBar.jsx';
@@ -69,6 +70,7 @@ export function App() {
             onTopUp={() => setTopUpOpen(true)}
           />
         )}
+        {tab === 'upgrade' && <UpgradeScreen onRefresh={refresh} />}
         {tab === 'profile' && <ProfileScreen user={user} onRefresh={refresh} />}
         {tab === 'admin' && user.is_admin && <AdminScreen user={user} onRefresh={refresh} />}
       </div>

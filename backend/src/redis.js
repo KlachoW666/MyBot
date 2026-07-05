@@ -3,6 +3,9 @@ import { config } from './config.js';
 
 export const redis = new Redis(config.redisUrl, {
   maxRetriesPerRequest: 2,
+  // Коннект при первой команде: модули можно импортировать (тесты, скрипты)
+  // без открытия соединения, которое держит процесс живым.
+  lazyConnect: true,
 });
 
 const UNLOCK_SCRIPT = `

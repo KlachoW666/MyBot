@@ -56,6 +56,12 @@ export const createInvoice = (amountStars) =>
 export const withdraw = (inventoryId) =>
   request('/withdraw', { method: 'POST', body: { inventoryId } });
 
+export const getUpgradeOptions = (inventoryId) =>
+  request(`/upgrade/options/${inventoryId}`);
+
+export const postUpgrade = (inventoryId, targetGiftId) =>
+  request('/upgrade', { method: 'POST', body: { inventoryId, targetGiftId } });
+
 // --- Админка (доступна только ID из ADMIN_IDS, сервер проверяет сам) ---
 export const adminStats = () => request('/admin/stats');
 export const adminCases = () => request('/admin/cases');

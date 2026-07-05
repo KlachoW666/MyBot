@@ -15,6 +15,7 @@ import withdrawRoutes from './routes/withdraw.js';
 import meRoutes from './routes/me.js';
 import adminRoutes from './routes/admin.js';
 import giftsRoutes from './routes/gifts.js';
+import upgradeRoutes from './routes/upgrade.js';
 import webhookRoutes from './routes/webhook.js';
 
 const FRONTEND_DIST = process.env.FRONTEND_DIST
@@ -52,6 +53,7 @@ export async function buildServer() {
     await api.register(meRoutes);
     await api.register(adminRoutes);
     await api.register(giftsRoutes);
+    await api.register(upgradeRoutes);
     await api.register(webhookRoutes);
   }, { prefix: '/api' });
 

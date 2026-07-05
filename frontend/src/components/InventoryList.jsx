@@ -7,6 +7,7 @@ const STATUS = {
   withdraw_pending: { label: 'отправляется', className: 'chip-pending' },
   withdrawn: { label: 'выведен', className: 'chip-done' },
   refunded: { label: 'возврат ⭐', className: 'chip-refund' },
+  lost: { label: 'сгорел в апгрейде', className: 'chip-lost' },
 };
 
 export function InventoryList({ onBalanceChange }) {

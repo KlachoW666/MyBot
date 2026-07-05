@@ -263,6 +263,73 @@ for (let i = 0; i < 5; i++) {
   else assert.equal(res.statusCode, 409, 'sixth active case must be rejected');
 }
 
+// 10b. Апгрейд: опции, форс-выигрыш, форс-проигрыш, пороги.
+await pool.query(`UPDATE users SET balance = balance + 200 WHERE telegram_id = 777`);
+res = await inject({ method: 'POST', url: `/api/cases/${caseRow.id}/open`,
+  payload: { idempotencyKey: crypto.randomUUID() } }, token);
+assert.equal(res.statusCode, 200, res.body);
+let upItem = res.json();
+// Гарантируем дешёвый предмет для апгрейда (перезаписываем напрямую).
+await pool.query(
+  `UPDATE inventory SET gift_id = 'gift-cheap', star_value = 15 WHERE id = $1`,
+  [upItem.inventoryId]);
+
+res = await inject({ method: 'GET', url: `/api/upgrade/options/${upItem.inventoryId}` }, token);
+assert.equal(res.statusCode, 200, res.body);
+const options = res.json();
+assert.equal(options.min_bp, 100);
+assert.equal(options.max_bp, 7500);
+const rareTarget = options.targets.find((t) => t.gift_id === 'gift-rare');
+assert.equal(rareTarget.chance_bp, 1500, '15/100 = 15% = 1500 bp');
+assert.ok(!options.targets.some((t) => t.star_count <= 15), 'targets must be more expensive');
+
+// Форс-проигрыш: roll 9999 ≥ любого шанса → предмет сгорает.
+process.env.UPGRADE_FORCE_ROLL = '9999';
+res = await inject({ method: 'POST', url: '/api/upgrade',
+  payload: { inventoryId: upItem.inventoryId, targetGiftId: 'gift-rare' } }, token);
+assert.equal(res.statusCode, 200, res.body);
+assert.equal(res.json().won, false);
+assert.equal(res.json().chance_bp, 1500);
+let { rows: [afterLoss] } = await pool.query(
+  'SELECT status FROM inventory WHERE id = $1', [upItem.inventoryId]);
+assert.equal(afterLoss.status, 'lost', 'lost upgrade must burn the item');
+
+// Повторный апгрейд сгоревшего предмета — 404.
+res = await inject({ method: 'POST', url: '/api/upgrade',
+  payload: { inventoryId: upItem.inventoryId, targetGiftId: 'gift-rare' } }, token);
+assert.equal(res.statusCode, 404, 'burned item cannot be upgraded again');
+
+// Форс-выигрыш: roll 0 < шанса → предмет становится целевым подарком.
+await pool.query(`UPDATE users SET balance = balance + 200 WHERE telegram_id = 777`);
+res = await inject({ method: 'POST', url: `/api/cases/${caseRow.id}/open`,
+  payload: { idempotencyKey: crypto.randomUUID() } }, token);
+upItem = res.json();
+await pool.query(
+  `UPDATE inventory SET gift_id = 'gift-cheap', star_value = 15 WHERE id = $1`,
+  [upItem.inventoryId]);
+process.env.UPGRADE_FORCE_ROLL = '0';
+res = await inject({ method: 'POST', url: '/api/upgrade',
+  payload: { inventoryId: upItem.inventoryId, targetGiftId: 'gift-rare' } }, token);
+assert.equal(res.statusCode, 200, res.body);
+assert.equal(res.json().won, true);
+assert.equal(res.json().gift.gift_id, 'gift-rare');
+const { rows: [afterWin] } = await pool.query(
+  'SELECT gift_id, star_value, status FROM inventory WHERE id = $1', [upItem.inventoryId]);
+assert.equal(afterWin.gift_id, 'gift-rare', 'won upgrade must swap the gift');
+assert.equal(Number(afterWin.star_value), 100);
+assert.equal(afterWin.status, 'won');
+
+// Цель дешевле предмета — 400.
+res = await inject({ method: 'POST', url: '/api/upgrade',
+  payload: { inventoryId: upItem.inventoryId, targetGiftId: 'gift-cheap' } }, token);
+assert.equal(res.statusCode, 400, 'downgrade target must be rejected');
+delete process.env.UPGRADE_FORCE_ROLL;
+
+// Журнал апгрейдов записан.
+const { rows: [{ n: upgradeCount }] } = await pool.query(
+  'SELECT count(*)::int AS n FROM upgrades WHERE user_id = 777');
+assert.equal(upgradeCount, 2);
+
 // 11. /start → приветствие с web_app-кнопкой «Открыть кейсы».
 res = await server.inject({ method: 'POST', url: '/api/bot/webhook',
   headers: { 'content-type': 'application/json',

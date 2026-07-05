@@ -3,6 +3,7 @@ import { haptic } from '../telegram.js';
 
 const TABS = [
   { id: 'cases', icon: '🎁', label: 'Кейсы' },
+  { id: 'upgrade', icon: '⚡', label: 'Апгрейд' },
   { id: 'profile', icon: '👤', label: 'Профиль' },
   { id: 'admin', icon: '⚙️', label: 'Админка', adminOnly: true },
 ];
