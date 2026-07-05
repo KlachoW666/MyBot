@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material3.Button
@@ -58,6 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.MarkFreshness
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.CircleAction
 import com.fuelmap.app.ui.common.PremiumPaywall
 import com.fuelmap.app.util.GeoUtils
 import com.fuelmap.app.util.LocationProvider
@@ -361,19 +363,40 @@ private fun StationInfoSheet(
                 )
             }
 
-            FilledTonalButton(onClick = onRoute, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Icon(Icons.Filled.NearMe, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                Text("Поехали")
-            }
             Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                OutlinedButton(onClick = { onDetails(station.id) }, modifier = Modifier.weight(1f)) {
-                    Text("Подробнее")
-                }
-                Button(onClick = { onMark(station.id) }, modifier = Modifier.weight(1f)) {
-                    Text("Отметить наличие")
+                CircleAction(
+                    icon = Icons.Filled.LocalGasStation,
+                    label = "Отметить",
+                    filled = true,
+                    onClick = { onMark(station.id) }
+                )
+                CircleAction(
+                    icon = Icons.Filled.NearMe,
+                    label = "Поехали",
+                    onClick = onRoute
+                )
+            }
+            Surface(
+                onClick = { onDetails(station.id) },
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Подробнее об АЗС",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("›", style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

@@ -14,34 +14,35 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-// Брендовая сине-голубая палитра + насыщенные tonal-поверхности (Material 3 Expressive).
+// Светлая палитра в духе Яндекс Заправок: чистый белый фон, насыщенный зелёный акцент,
+// мягкие светло-серые «пилюли» и карточки.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF0061A4),
+    primary = Color(0xFF15B34A),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFD1E4FF),
-    onPrimaryContainer = Color(0xFF001D36),
-    secondary = Color(0xFF1F6587),
+    primaryContainer = Color(0xFFDDF5E4),
+    onPrimaryContainer = Color(0xFF05351A),
+    secondary = Color(0xFF00B3A4),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFC6E7FF),
-    onSecondaryContainer = Color(0xFF001E2E),
-    tertiary = Color(0xFFE06C00),
+    secondaryContainer = Color(0xFFC9F3EE),
+    onSecondaryContainer = Color(0xFF00382F),
+    tertiary = Color(0xFF1466D8),
     onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFDCC2),
-    onTertiaryContainer = Color(0xFF2E1500),
-    background = Color(0xFFF8F9FF),
-    onBackground = Color(0xFF191C20),
-    surface = Color(0xFFF8F9FF),
-    onSurface = Color(0xFF191C20),
-    surfaceVariant = Color(0xFFDFE2EB),
-    onSurfaceVariant = Color(0xFF42474E),
+    tertiaryContainer = Color(0xFFD8E6FF),
+    onTertiaryContainer = Color(0xFF001B3D),
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF16181B),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF16181B),
+    surfaceVariant = Color(0xFFEFF1F3),
+    onSurfaceVariant = Color(0xFF6A7075),
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF2F3FA),
-    surfaceContainer = Color(0xFFECEEF4),
-    surfaceContainerHigh = Color(0xFFE6E8EF),
-    surfaceContainerHighest = Color(0xFFE1E2E9),
-    outline = Color(0xFF73777F),
-    outlineVariant = Color(0xFFC3C7CF),
-    error = Color(0xFFBA1A1A)
+    surfaceContainerLow = Color(0xFFFAFBFC),
+    surfaceContainer = Color(0xFFF3F4F6),
+    surfaceContainerHigh = Color(0xFFEDEEF1),
+    surfaceContainerHighest = Color(0xFFE6E8EB),
+    outline = Color(0xFFC6C9CE),
+    outlineVariant = Color(0xFFE4E6E9),
+    error = Color(0xFFE5484D)
 )
 
 // Премиальная тёмная палитра (как в референсах): глубокий сине-чёрный фон,
@@ -77,10 +78,13 @@ private val DarkColors = darkColorScheme(
     inverseOnSurface = Color(0xFF11151D)
 )
 
-// Крупные «выразительные» скругления.
+// Фирменный зелёный градиент (как кнопка «Подтверждаю» у Яндекс Заправок).
+val BrandGradient = listOf(Color(0xFF3AD07D), Color(0xFF12B36A))
+
+// Крупные «выразительные» скругления (пилюли/капсулы, как у Яндекса).
 private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(12.dp),
-    small = RoundedCornerShape(16.dp),
+    extraSmall = RoundedCornerShape(14.dp),
+    small = RoundedCornerShape(18.dp),
     medium = RoundedCornerShape(22.dp),
     large = RoundedCornerShape(28.dp),
     extraLarge = RoundedCornerShape(36.dp)
@@ -88,7 +92,7 @@ private val AppShapes = Shapes(
 
 @Composable
 fun FuelMapTheme(
-    darkTheme: Boolean = true,        // премиальный тёмный вид по умолчанию (как в референсах)
+    darkTheme: Boolean = false,       // светлый «яндекс»-вид по умолчанию
     dynamicColor: Boolean = false,    // фиксированный фирменный акцент, без подмены цветами обоев
     content: @Composable () -> Unit
 ) {

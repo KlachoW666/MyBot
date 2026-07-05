@@ -62,6 +62,8 @@ import com.fuelmap.app.data.repository.FuelEntry
 import com.fuelmap.app.domain.model.FuelType
 import com.fuelmap.app.domain.model.Queue
 import com.fuelmap.app.ui.AppViewModelProvider
+import com.fuelmap.app.ui.common.GradientButton
+import com.fuelmap.app.ui.common.OptionPill
 import com.fuelmap.app.ui.common.SupportFooter
 import com.fuelmap.app.util.LocationProvider
 import com.fuelmap.app.util.PhotoStorage
@@ -136,7 +138,7 @@ fun MarkScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Отметить наличие") },
+                title = { Text("Ситуация на АЗС") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
@@ -159,23 +161,12 @@ fun MarkScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Button(
+                    GradientButton(
+                        text = if (locating) "Определяем геолокацию…" else "Подтверждаю",
                         onClick = { attemptSubmit() },
                         enabled = !locating && selected.isNotEmpty(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 52.dp)
-                    ) {
-                        if (locating) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp).padding(end = 8.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Text("Определяем геолокацию…")
-                        } else {
-                            Text("Сохранить отметку")
-                        }
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     SupportFooter()
                 }
             }
@@ -191,9 +182,10 @@ fun MarkScreen(
         ) {
             item {
                 Text(
-                    "Выберите типы топлива",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 12.dp)
+                    "Какое топливо есть на АЗС?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
                 )
             }
 
@@ -210,21 +202,33 @@ fun MarkScreen(
             }
 
             item {
-                Text("Очередь", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Оцените очередь",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
             item {
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    Queue.entries.forEachIndexed { index, q ->
-                        SegmentedButton(
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Queue.entries.forEach { q ->
+                        OptionPill(
+                            label = q.title,
                             selected = queue == q,
                             onClick = { queue = q },
-                            shape = SegmentedButtonDefaults.itemShape(index, Queue.entries.size)
-                        ) { Text(q.title) }
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
 
-            item { Text("Фото (необязательно)", style = MaterialTheme.typography.titleMedium) }
+            item {
+                Text(
+                    "Фото (необязательно)",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             item {
                 OutlinedButton(
                     onClick = {

@@ -140,10 +140,14 @@ object MarkerIcons {
         return bmp
     }
 
-    fun bitmap(freshness: MarkFreshness, sizePx: Int = 72): Bitmap {
+    /** Маркер АЗС в стиле Яндекса: скруглённый квадрат («сквиркл») с белой обводкой и каплей. */
+    fun bitmap(freshness: MarkFreshness, sizePx: Int = 84): Bitmap {
         val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
-        val r = sizePx / 2f
+        val pad = sizePx * 0.10f
+        val corner = sizePx * 0.30f
+        val rect = RectF(pad, pad, sizePx - pad, sizePx - pad)
+
         val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = colorFor(freshness)
             style = Paint.Style.FILL
@@ -151,16 +155,18 @@ object MarkerIcons {
         val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             style = Paint.Style.STROKE
-            strokeWidth = sizePx * 0.10f
+            strokeWidth = sizePx * 0.09f
         }
-        canvas.drawCircle(r, r, r - sizePx * 0.10f, fill)
-        canvas.drawCircle(r, r, r - sizePx * 0.10f, border)
-        // маленькая «капля» топлива в центре
+        canvas.drawRoundRect(rect, corner, corner, fill)
+        canvas.drawRoundRect(rect, corner, corner, border)
+
+        // белая «капля» топлива в центре
+        val cx = sizePx / 2f
         val inner = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(r, r, sizePx * 0.16f, inner)
+        canvas.drawCircle(cx, cx, sizePx * 0.15f, inner)
         return bmp
     }
 }

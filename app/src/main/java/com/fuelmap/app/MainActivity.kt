@@ -10,6 +10,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -25,11 +26,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
-        // Тёмный премиум-вид: светлые иконки статус-бара независимо от системной темы.
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
-        )
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val container = (application as FuelMapApplication).container
 
@@ -39,6 +36,12 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
                 ThemeMode.LIGHT -> false
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            // Иконки системных баров подстраиваются под тему (тёмные на светлой, светлые на тёмной).
+            LaunchedEffect(darkTheme) {
+                val style = if (darkTheme) SystemBarStyle.dark(Color.TRANSPARENT)
+                else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
             }
             FuelMapTheme(darkTheme = darkTheme) {
                 Surface(

@@ -15,7 +15,7 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 enum class ThemeMode { SYSTEM, DARK, LIGHT }
 
 data class AppSettings(
-    val themeMode: ThemeMode = ThemeMode.DARK,
+    val themeMode: ThemeMode = ThemeMode.LIGHT,
     val markRadiusMeters: Int = 750,
     val preferredFuel: FuelType? = null,
     val geoNotifyEnabled: Boolean = false
@@ -30,7 +30,7 @@ class SettingsManager(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { p ->
         AppSettings(
-            themeMode = p[themeKey]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.DARK,
+            themeMode = p[themeKey]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.LIGHT,
             markRadiusMeters = p[radiusKey] ?: 750,
             preferredFuel = p[fuelKey]?.let { FuelType.fromName(it) },
             geoNotifyEnabled = p[geoKey] ?: false
