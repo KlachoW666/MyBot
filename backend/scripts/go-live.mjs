@@ -29,7 +29,13 @@ if (!existsSync(envPath)) {
   process.exit(1);
 }
 const { readFileSync } = await import('node:fs');
-for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+// Блокнот/PowerShell пишут UTF-16 или UTF-8 c BOM — учитываем всё.
+const rawEnv = readFileSync(envPath);
+let envText = rawEnv[0] === 0xff && rawEnv[1] === 0xfe
+  ? rawEnv.toString('utf16le')
+  : rawEnv.toString('utf8');
+envText = envText.replace(/^﻿/, '');
+for (const line of envText.split('\n')) {
   const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)$/);
   if (!match) continue;
   // Инлайн-комментарии и пробелы не часть значения.
