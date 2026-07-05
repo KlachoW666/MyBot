@@ -30,8 +30,11 @@ if (!existsSync(envPath)) {
 }
 const { readFileSync } = await import('node:fs');
 for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-  const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
-  if (match && !(match[1] in process.env)) process.env[match[1]] = match[2];
+  const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)$/);
+  if (!match) continue;
+  // Инлайн-комментарии и пробелы не часть значения.
+  const value = match[2].replace(/\s+#.*$/, '').trim();
+  if (value && !(match[1] in process.env)) process.env[match[1]] = value;
 }
 if (!process.env.BOT_TOKEN) {
   console.error('✗ BOT_TOKEN пуст в backend/.env — возьми у @BotFather (/mybots → API Token)');

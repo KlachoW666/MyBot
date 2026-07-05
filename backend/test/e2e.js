@@ -17,6 +17,7 @@ process.env.DATABASE_URL ??= 'postgres://mybot@localhost:5432/mybot';
 process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.ADMIN_IDS = '8486449177';
 process.env.PUBLIC_URL = 'https://app.example.test';
+process.env.TELEGRAM_API_BASE = 'https://api.telegram.org'; // стаб fetch ловит только этот хост
 
 // ---------------------------------------------------------- стаб Bot API
 const FAKE_GIFTS = [

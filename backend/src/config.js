@@ -1,3 +1,11 @@
+import { fileURLToPath } from 'node:url';
+
+// .env читается и при npm start/dev, не только через go-live.
+// Уже выставленные переменные окружения не перезаписываются.
+try {
+  process.loadEnvFile(fileURLToPath(new URL('../.env', import.meta.url)));
+} catch { /* .env может отсутствовать (переменные заданы снаружи) */ }
+
 const required = (name) => {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required env var: ${name}`);
