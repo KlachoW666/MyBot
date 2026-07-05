@@ -24,12 +24,17 @@ export async function handleUpdate(update, logger) {
 }
 
 async function handleStart(message, logger) {
-  const button = config.publicUrl
-    ? { inline_keyboard: [[{ text: '🎁 Открыть кейсы', web_app: { url: config.publicUrl } }]] }
+  // config.publicUrl читаем в момент обработки: go-live проставляет его
+  // после поднятия туннеля, уже после старта сервера.
+  const url = config.publicUrl;
+  const button = url
+    ? { inline_keyboard: [[{ text: '🎁 Открыть кейсы', web_app: { url } }]] }
     : undefined;
   await sendMessage({
     chatId: message.chat.id,
-    text: 'Добро пожаловать в Gift Cases! Открывай кейсы, выигрывай подарки и выводи их прямо в Telegram ⭐',
+    text: url
+      ? '🎁 Добро пожаловать в Gift Cases!\n\nОткрывай кейсы за Telegram Stars, выигрывай подарки и выводи их себе в профиль. Жми кнопку ниже 👇'
+      : '🎁 Gift Cases скоро запустится — приложение ещё настраивается, загляни через минуту.',
     replyMarkup: button,
   }).catch((err) => logger.warn({ err }, 'failed to reply to /start'));
 }

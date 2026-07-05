@@ -79,10 +79,11 @@ app.post('/bot:token/:method', async (request, reply) => {
 
     case 'answerPreCheckoutQuery':
     case 'setChatMenuButton':
+    case 'setMyCommands':
       return ok(true);
 
     case 'sendMessage':
-      app.log.warn({ chat_id: body.chat_id, text: body.text }, 'EMU: message');
+      app.log.warn({ chat_id: body.chat_id, text: body.text, button: body.reply_markup?.inline_keyboard?.[0]?.[0] ?? null }, 'EMU: message');
       return ok({ message_id: Date.now(), chat: { id: body.chat_id }, text: body.text });
 
     case 'setWebhook':

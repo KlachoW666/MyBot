@@ -16,6 +16,7 @@ process.env.JWT_SECRET ??= 'e2e-jwt-secret';
 process.env.DATABASE_URL ??= 'postgres://mybot@localhost:5432/mybot';
 process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.ADMIN_IDS = '8486449177';
+process.env.PUBLIC_URL = 'https://app.example.test';
 
 // ---------------------------------------------------------- стаб Bot API
 const FAKE_GIFTS = [
@@ -25,6 +26,7 @@ const FAKE_GIFTS = [
     star_count: 100, total_count: 500, remaining_count: 3 },
 ];
 let sendGiftCalls = 0;
+const sentMessages = [];
 
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, options) => {
@@ -37,7 +39,9 @@ globalThis.fetch = async (url, options) => {
 
   switch (method) {
     case 'answerPreCheckoutQuery':
+      return reply({ ok: true, result: true });
     case 'sendMessage':
+      sentMessages.push(body);
       return reply({ ok: true, result: true });
     case 'getAvailableGifts':
       return reply({ ok: true, result: { gifts: FAKE_GIFTS } });
@@ -236,7 +240,21 @@ for (let i = 0; i < 5; i++) {
   else assert.equal(res.statusCode, 409, 'sixth active case must be rejected');
 }
 
-console.log('E2E OK: auth, catalog, invoice, open (idempotent), withdraw (429 retry / refund), webhook secret, payment credit, admin guard + 5-case limit');
+// 11. /start → приветствие с web_app-кнопкой «Открыть кейсы».
+res = await server.inject({ method: 'POST', url: '/api/bot/webhook',
+  headers: { 'content-type': 'application/json',
+    'x-telegram-bot-api-secret-token': process.env.WEBHOOK_SECRET },
+  payload: { update_id: 5, message: {
+    message_id: 11, date: Math.floor(Date.now() / 1000), text: '/start',
+    chat: { id: 777, type: 'private' },
+    from: { id: 777, is_bot: false, first_name: 'E2E' } } } });
+assert.equal(res.statusCode, 200);
+const startReply = sentMessages.find((msg) => msg.reply_markup);
+assert.ok(startReply, '/start must reply with a button');
+assert.equal(startReply.reply_markup.inline_keyboard[0][0].web_app.url,
+  'https://app.example.test', '/start button must open the mini app');
+
+console.log('E2E OK: auth, catalog, invoice, open (idempotent), withdraw (429 retry / refund), webhook secret, payment credit, admin guard + 5-case limit, /start web_app button');
 await server.close();
 await pool.end();
 redis.disconnect();

@@ -91,13 +91,17 @@ if (!publicUrl) {
   console.log('… открываю HTTPS-туннель (cloudflared)');
   publicUrl = await startTunnel(config.port);
   console.log(`✓ туннель: ${publicUrl}`);
+  // Обработчик /start берёт URL из конфига в момент запроса —
+  // прокидываем адрес туннеля, чтобы кнопка «Открыть кейсы» работала.
+  config.publicUrl = publicUrl;
 }
 
-// --- вебхук + кнопка меню ---
-const { setWebhook, setMenuButton } = await import('../src/lib/telegram-api.js');
+// --- вебхук + кнопка меню + /start в списке команд ---
+const { setWebhook, setMenuButton, setMyCommands } = await import('../src/lib/telegram-api.js');
 await setWebhook({ url: `${publicUrl}/api/bot/webhook`, secretToken: config.webhookSecret });
 await setMenuButton({ url: publicUrl });
-console.log('✓ вебхук и кнопка меню настроены');
+await setMyCommands([{ command: 'start', description: '🎁 Открыть кейсы' }]);
+console.log('✓ вебхук, кнопка меню и команды настроены');
 
 console.log(`
 ┌──────────────────────────────────────────────────────┐

@@ -130,6 +130,11 @@ export async function setMenuButton({ url, text = '🎁 Кейсы' }) {
   });
 }
 
+/** Список команд бота (кнопка «Меню» со /start). */
+export async function setMyCommands(commands) {
+  return call('setMyCommands', { commands });
+}
+
 /** Настройка вебхука: только HTTPS + secret_token. */
 export async function setWebhook({ url, secretToken }) {
   if (!url.startsWith('https://')) {
