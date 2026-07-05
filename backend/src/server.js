@@ -1,6 +1,9 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import { redis } from './redis.js';
 import { errorHandler } from './lib/errors.js';
 import authPlugin from './plugins/auth.js';
@@ -12,6 +15,9 @@ import withdrawRoutes from './routes/withdraw.js';
 import meRoutes from './routes/me.js';
 import adminRoutes from './routes/admin.js';
 import webhookRoutes from './routes/webhook.js';
+
+const FRONTEND_DIST = process.env.FRONTEND_DIST
+  ?? fileURLToPath(new URL('../../frontend/dist', import.meta.url));
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -34,16 +40,24 @@ export async function buildServer() {
   await fastify.register(authPlugin);
   fastify.setErrorHandler(errorHandler);
 
-  fastify.get('/health', { config: { rateLimit: false } }, () => ({ ok: true }));
+  // Всё API — под /api: фронт и API живут на одном домене (один туннель/прокси).
+  await fastify.register(async (api) => {
+    api.get('/health', { config: { rateLimit: false } }, () => ({ ok: true }));
+    await api.register(authRoutes);
+    await api.register(catalogRoutes);
+    await api.register(casesRoutes);
+    await api.register(payRoutes);
+    await api.register(withdrawRoutes);
+    await api.register(meRoutes);
+    await api.register(adminRoutes);
+    await api.register(webhookRoutes);
+  }, { prefix: '/api' });
 
-  await fastify.register(authRoutes);
-  await fastify.register(catalogRoutes);
-  await fastify.register(casesRoutes);
-  await fastify.register(payRoutes);
-  await fastify.register(withdrawRoutes);
-  await fastify.register(meRoutes);
-  await fastify.register(adminRoutes);
-  await fastify.register(webhookRoutes);
+  // Прод/тест: раздаём собранный фронт (vite build) прямо из backend'а.
+  if (existsSync(FRONTEND_DIST)) {
+    await fastify.register(fastifyStatic, { root: FRONTEND_DIST, index: 'index.html' });
+    fastify.log.info({ dir: FRONTEND_DIST }, 'serving frontend build');
+  }
 
   return fastify;
 }

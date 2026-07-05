@@ -7,7 +7,7 @@ if (!config.publicUrl) {
 }
 
 const result = await setWebhook({
-  url: `${config.publicUrl.replace(/\/$/, '')}/bot/webhook`,
+  url: `${config.publicUrl.replace(/\/$/, '')}/api/bot/webhook`,
   secretToken: config.webhookSecret,
 });
 console.log('setWebhook:', result);

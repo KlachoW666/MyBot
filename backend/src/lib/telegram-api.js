@@ -120,6 +120,16 @@ export async function sendMessage({ chatId, text, replyMarkup }) {
   }, { retries: 1 });
 }
 
+/**
+ * Кнопка меню бота (по умолчанию для всех чатов) → открытие мини-аппа.
+ * Позволяет настроить бота без ручных действий в @BotFather.
+ */
+export async function setMenuButton({ url, text = '🎁 Кейсы' }) {
+  return call('setChatMenuButton', {
+    menu_button: { type: 'web_app', text, web_app: { url } },
+  });
+}
+
 /** Настройка вебхука: только HTTPS + secret_token. */
 export async function setWebhook({ url, secretToken }) {
   if (!url.startsWith('https://')) {

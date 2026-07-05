@@ -65,25 +65,36 @@
 └── .env.example
 ```
 
-## Быстрый старт (production)
+## Проверить в Telegram прямо сейчас — одна команда
+
+Нужны: [Node.js 20+](https://nodejs.org) и [Docker Desktop](https://docker.com)
+(для Postgres/Redis; если они уже установлены локально — Docker не нужен).
 
 ```bash
-cp .env.example backend/.env      # BOT_TOKEN, JWT_SECRET, WEBHOOK_SECRET, PUBLIC_URL
-docker compose up -d postgres redis
-
-cd backend
-npm install
-npm run migrate
-npm run seed                      # 5 кейсов из живого getAvailableGifts
-npm start                         # API + вебхук на :8080
-
-cd ../frontend
-npm install && npm run build      # раздать dist/ с того же домена (path /, api → /api)
-
-cd ../backend && npm run set-webhook   # HTTPS-вебхук с secret_token
+git clone <репозиторий> && cd MyBot
+cp .env.example backend/.env      # вставить BOT_TOKEN от @BotFather
+cd backend && npm install
+npm run go
 ```
 
-В @BotFather: **Bot Settings → Menu Button** (или Main Mini App) → URL фронтенда.
+`npm run go` сам: поднимет базы → применит схему → засеет 5 кейсов из живого
+каталога подарков → соберёт фронт → запустит сервер → откроет публичный
+HTTPS-туннель (cloudflared, без регистрации) → поставит вебхук и кнопку меню
+«🎁 Кейсы» у бота. Дальше просто открой бота в Telegram и нажми кнопку меню.
+
+Туннель временный (URL меняется при перезапуске) — для постоянного деплоя
+задай `PUBLIC_URL` в `.env` (свой HTTPS-домен), и `npm run go` пропустит
+туннель, а вебхук/кнопку настроит на твой домен.
+
+## Production вручную (если не нужен npm run go)
+
+```bash
+docker compose up -d postgres redis
+cd backend && npm install && npm run migrate && npm run seed
+cd ../frontend && npm install && npm run build   # backend раздаёт dist/ сам
+cd ../backend && npm start                        # всё на :8080 (апп + /api)
+PUBLIC_URL=https://ваш-домен npm run set-webhook
+```
 
 ## Локальная разработка без Telegram
 

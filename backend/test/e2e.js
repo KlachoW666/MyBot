@@ -93,16 +93,16 @@ function makeInitData(userId) {
 }
 
 // 1. Авторизация: битый initData → 401, валидный → JWT.
-let res = await inject({ method: 'POST', url: '/auth', payload: { initData: 'auth_date=1&hash=' + '0'.repeat(64) } });
+let res = await inject({ method: 'POST', url: '/api/auth', payload: { initData: 'auth_date=1&hash=' + '0'.repeat(64) } });
 assert.equal(res.statusCode, 401, 'forged initData must be rejected');
 
-res = await inject({ method: 'POST', url: '/auth', payload: { initData: makeInitData(777) } });
+res = await inject({ method: 'POST', url: '/api/auth', payload: { initData: makeInitData(777) } });
 assert.equal(res.statusCode, 200, res.body);
 const { token } = res.json();
 assert.ok(token);
 
 // 2. Каталог (стабовый getAvailableGifts) и снапшот в БД.
-res = await inject({ method: 'GET', url: '/catalog' }, token);
+res = await inject({ method: 'GET', url: '/api/catalog' }, token);
 assert.equal(res.statusCode, 200, res.body);
 assert.equal(res.json().gifts.length, 3);
 assert.equal((await pool.query('SELECT count(*) FROM gifts_catalog')).rows[0].count, '3');
@@ -121,30 +121,30 @@ for (const gift of FAKE_GIFTS) {
 }
 
 // 4. Инвойс на пополнение.
-res = await inject({ method: 'POST', url: '/pay/invoice', payload: { amountStars: 100 } }, token);
+res = await inject({ method: 'POST', url: '/api/pay/invoice', payload: { amountStars: 100 } }, token);
 assert.equal(res.statusCode, 200, res.body);
 assert.match(res.json().link, /^https:\/\/t\.me\/invoice\//);
 
 // 5. Открытие: идемпотентность по ключу + списание ровно один раз.
 const idemKey = crypto.randomUUID();
-res = await inject({ method: 'POST', url: `/cases/${caseRow.id}/open`, payload: { idempotencyKey: idemKey } }, token);
+res = await inject({ method: 'POST', url: `/api/cases/${caseRow.id}/open`, payload: { idempotencyKey: idemKey } }, token);
 assert.equal(res.statusCode, 200, res.body);
 const opened = res.json();
 assert.ok(opened.gift.gift_id);
 assert.equal(opened.balance, 400);
 
-res = await inject({ method: 'POST', url: `/cases/${caseRow.id}/open`, payload: { idempotencyKey: idemKey } }, token);
+res = await inject({ method: 'POST', url: `/api/cases/${caseRow.id}/open`, payload: { idempotencyKey: idemKey } }, token);
 assert.equal(res.json().duplicate, true, 'same idempotency key must not open twice');
 assert.equal(res.json().balance, 400, 'no double charge');
 
 // Недостаточно баланса → 402.
 await pool.query('UPDATE users SET balance = 5 WHERE telegram_id = 777');
-res = await inject({ method: 'POST', url: `/cases/${caseRow.id}/open`, payload: { idempotencyKey: crypto.randomUUID() } }, token);
+res = await inject({ method: 'POST', url: `/api/cases/${caseRow.id}/open`, payload: { idempotencyKey: crypto.randomUUID() } }, token);
 assert.equal(res.statusCode, 402);
 await pool.query('UPDATE users SET balance = 400 WHERE telegram_id = 777');
 
 // 6. Вывод: первый sendGift получает 429 и ретраится (или рефандится, если выпал rare).
-res = await inject({ method: 'POST', url: '/withdraw', payload: { inventoryId: opened.inventoryId } }, token);
+res = await inject({ method: 'POST', url: '/api/withdraw', payload: { inventoryId: opened.inventoryId } }, token);
 assert.equal(res.statusCode, 200, res.body);
 const wd = res.json();
 if (opened.gift.gift_id === 'gift-rare') {
@@ -158,21 +158,21 @@ if (opened.gift.gift_id === 'gift-rare') {
 }
 
 // Повторный вывод того же предмета — 409.
-res = await inject({ method: 'POST', url: '/withdraw', payload: { inventoryId: opened.inventoryId } }, token);
+res = await inject({ method: 'POST', url: '/api/withdraw', payload: { inventoryId: opened.inventoryId } }, token);
 assert.equal(res.statusCode, 409, 'double withdraw must be rejected');
 
 // 7. Инвентарь отражает финальный статус.
-res = await inject({ method: 'GET', url: '/me/inventory' }, token);
+res = await inject({ method: 'GET', url: '/api/me/inventory' }, token);
 const item = res.json().items.find((entry) => entry.id === opened.inventoryId);
 assert.ok(['withdrawn', 'refunded'].includes(item.status));
 
 // 8. Вебхук: неверный секрет — 401, верный — 200.
-res = await server.inject({ method: 'POST', url: '/bot/webhook',
+res = await server.inject({ method: 'POST', url: '/api/bot/webhook',
   headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': 'wrong' },
   payload: { update_id: 1 } });
 assert.equal(res.statusCode, 401, 'webhook must verify secret token');
 
-res = await server.inject({ method: 'POST', url: '/bot/webhook',
+res = await server.inject({ method: 'POST', url: '/api/bot/webhook',
   headers: { 'content-type': 'application/json',
     'x-telegram-bot-api-secret-token': process.env.WEBHOOK_SECRET },
   payload: { update_id: 1 } });
@@ -181,7 +181,7 @@ assert.equal(res.statusCode, 200);
 // 9. Оплата через вебхук: pre_checkout + successful_payment → зачисление.
 const paidPayload = JSON.stringify({ t: 'topup', uid: 777, amt: 250, n: 'e2e' });
 const paidFrom = { id: 777, is_bot: false, first_name: 'E2E', username: 'e2e_user' };
-res = await server.inject({ method: 'POST', url: '/bot/webhook',
+res = await server.inject({ method: 'POST', url: '/api/bot/webhook',
   headers: { 'content-type': 'application/json',
     'x-telegram-bot-api-secret-token': process.env.WEBHOOK_SECRET },
   payload: { update_id: 3, message: {
@@ -196,7 +196,7 @@ assert.equal(Number(afterPay.balance), balanceBeforePay + 250, 'webhook payment 
 
 // Платёж от юзера, которого ещё НЕТ в БД (никогда не открывал апп) — должен создать его.
 const freshFrom = { id: 555000111, is_bot: false, first_name: 'Fresh' };
-res = await server.inject({ method: 'POST', url: '/bot/webhook',
+res = await server.inject({ method: 'POST', url: '/api/bot/webhook',
   headers: { 'content-type': 'application/json',
     'x-telegram-bot-api-secret-token': process.env.WEBHOOK_SECRET },
   payload: { update_id: 4, message: {
@@ -211,25 +211,25 @@ assert.ok(freshUser, 'payment must create unknown user');
 assert.equal(Number(freshUser.balance), 77, 'fresh user credited');
 
 // 10. Админка: обычный юзер → 403; админ (8486449177) — статы и корректировка баланса.
-res = await inject({ method: 'GET', url: '/admin/stats' }, token);
+res = await inject({ method: 'GET', url: '/api/admin/stats' }, token);
 assert.equal(res.statusCode, 403, 'non-admin must be rejected');
 
-res = await inject({ method: 'POST', url: '/auth', payload: { initData: makeInitData(8486449177) } });
+res = await inject({ method: 'POST', url: '/api/auth', payload: { initData: makeInitData(8486449177) } });
 const adminToken = res.json().token;
 assert.equal(res.json().user.is_admin, true);
 
-res = await inject({ method: 'GET', url: '/admin/stats' }, adminToken);
+res = await inject({ method: 'GET', url: '/api/admin/stats' }, adminToken);
 assert.equal(res.statusCode, 200, res.body);
 assert.ok(res.json().users >= 2);
 
-res = await inject({ method: 'POST', url: '/admin/balance',
+res = await inject({ method: 'POST', url: '/api/admin/balance',
   payload: { telegram_id: 8486449177, amount: 1000 } }, adminToken);
 assert.equal(res.statusCode, 200, res.body);
 assert.equal(res.json().balance, 1000);
 
 // Шестой активный кейс — отказ (на экран помещается максимум 5).
 for (let i = 0; i < 5; i++) {
-  res = await inject({ method: 'POST', url: '/admin/cases', payload: {
+  res = await inject({ method: 'POST', url: '/api/admin/cases', payload: {
     slug: `extra-${i}`, title: `Extra ${i}`, price_stars: 10,
     items: [{ gift_id: 'gift-cheap', weight: 1 }] } }, adminToken);
   if (i < 4) assert.equal(res.statusCode, 200, res.body); // + кейс 'e2e' = 5 активных

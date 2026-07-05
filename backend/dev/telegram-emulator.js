@@ -78,6 +78,7 @@ app.post('/bot:token/:method', async (request, reply) => {
     }
 
     case 'answerPreCheckoutQuery':
+    case 'setChatMenuButton':
       return ok(true);
 
     case 'sendMessage':
@@ -104,7 +105,7 @@ app.post('/emu/pay', async (request, reply) => {
   const payload = JSON.stringify({ t: 'topup', uid: user_id, amt: amount,
     n: crypto.randomBytes(6).toString('hex') });
   const from = { id: user_id, is_bot: false, first_name, username };
-  const post = (update) => fetch(`${BACKEND_URL}/bot/webhook`, {
+  const post = (update) => fetch(`${BACKEND_URL}/api/bot/webhook`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -126,4 +127,4 @@ app.post('/emu/pay', async (request, reply) => {
 });
 
 await app.listen({ port: PORT, host: '0.0.0.0' });
-console.log(`Telegram Bot API emulator on :${PORT} → webhook ${BACKEND_URL}/bot/webhook`);
+console.log(`Telegram Bot API emulator on :${PORT} → webhook ${BACKEND_URL}/api/bot/webhook`);

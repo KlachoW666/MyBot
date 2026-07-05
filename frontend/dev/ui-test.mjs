@@ -43,7 +43,7 @@ await page.addInitScript((initData) => {
 page.on('console', (msg) => { if (msg.type() === 'error') console.log('CONSOLE ERR:', msg.text()); });
 page.on('pageerror', (err) => console.log('PAGE ERR:', err.message));
 
-await page.goto('http://localhost:5173/');
+await page.goto(process.env.APP_URL ?? 'http://localhost:5173/');
 await page.waitForSelector('.case-card', { timeout: 15000 });
 await page.screenshot({ path: `${OUT}/1-cases.png` });
 
