@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { openCase } from '../api.js';
 import { haptic } from '../telegram.js';
+import { GiftImage } from './GiftImage.jsx';
 
 const CELL = 84;        // ширина ячейки рулетки + gap, px (см. styles.css)
 const TARGET = 36;      // индекс ячейки, на которой останавливаемся
@@ -70,7 +71,7 @@ export function OpenOverlay({ caseData, balance, onBalanceChange, onTopUp, onClo
           <div className="drops">
             {caseData.items.map((item) => (
               <div key={item.gift_id} className="drop">
-                <span className="drop-emoji">{item.emoji ?? '🎁'}</span>
+                <GiftImage giftId={item.gift_id} emoji={item.emoji} size={46} />
                 <span className="drop-price">{item.star_count} ⭐</span>
               </div>
             ))}
@@ -94,7 +95,7 @@ export function OpenOverlay({ caseData, balance, onBalanceChange, onTopUp, onClo
             <div className="roulette-strip" ref={stripRef}>
               {strip.map((item, index) => (
                 <div key={index} className="roulette-cell">
-                  <span>{item.emoji ?? '🎁'}</span>
+                  <GiftImage giftId={item.gift_id} emoji={item.emoji} size={58} />
                 </div>
               ))}
             </div>
@@ -108,7 +109,7 @@ export function OpenOverlay({ caseData, balance, onBalanceChange, onTopUp, onClo
       {phase === 'reveal' && result && (
         <div className="overlay-body reveal">
           <div className="prize-burst">
-            <span className="prize-emoji">{result.gift.emoji ?? '🎁'}</span>
+            <GiftImage giftId={result.gift.gift_id} emoji={result.gift.emoji} size={110} className="prize-img" />
           </div>
           <div className="prize-name">{result.gift.star_count} ⭐</div>
           <p className="prize-sub">Подарок добавлен в инвентарь</p>

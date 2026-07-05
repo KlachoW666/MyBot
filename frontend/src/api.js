@@ -59,6 +59,7 @@ export const withdraw = (inventoryId) =>
 // --- Админка (доступна только ID из ADMIN_IDS, сервер проверяет сам) ---
 export const adminStats = () => request('/admin/stats');
 export const adminCases = () => request('/admin/cases');
+export const adminCatalog = () => request('/admin/catalog');
 export const adminSaveCase = (payload) => request('/admin/cases', { method: 'POST', body: payload });
 export const adminToggleCase = (id) => request(`/admin/cases/${id}/toggle`, { method: 'POST' });
 export const adminRefreshCatalog = () => request('/admin/catalog/refresh', { method: 'POST' });

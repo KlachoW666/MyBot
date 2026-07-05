@@ -89,5 +89,17 @@ if (await btn.count()) {
   await page.screenshot({ path: `${OUT}/8-withdraw.png` });
 }
 
+// Конструктор кейсов в админке
+await page.click('.tab >> nth=2');
+await page.waitForSelector('.admin-stats');
+await page.getByText('+ Создать кейс').click();
+await page.waitForSelector('.builder-gifts');
+await page.fill('input[placeholder="Название кейса"]', 'VIP кейс');
+await page.fill('input[placeholder="Цена открытия, ⭐"]', '150');
+const giftButtons = page.locator('.builder-gift-main');
+for (let i = 0; i < 4; i++) await giftButtons.nth(i).click();
+await page.waitForTimeout(500);
+await page.screenshot({ path: `${OUT}/9-builder.png` });
+
 console.log('UI OK');
 await browser.close();

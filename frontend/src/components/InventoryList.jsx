@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getInventory, withdraw } from '../api.js';
 import { haptic } from '../telegram.js';
+import { GiftImage } from './GiftImage.jsx';
 
 const STATUS = {
   withdraw_pending: { label: 'отправляется', className: 'chip-pending' },
@@ -50,7 +51,7 @@ export function InventoryList({ onBalanceChange }) {
       {notice && <div className={`notice notice-${notice.kind}`}>{notice.text}</div>}
       {items.map((item) => (
         <div key={item.id} className="inv-item">
-          <span className="inv-emoji">{item.emoji ?? '🎁'}</span>
+          <GiftImage giftId={item.gift_id} emoji={item.emoji} size={42} />
           <div className="inv-mid">
             <span className="inv-value">{item.star_value} ⭐</span>
             <span className="inv-date">

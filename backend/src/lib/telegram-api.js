@@ -130,6 +130,22 @@ export async function setMenuButton({ url, text = '🎁 Кейсы' }) {
   });
 }
 
+/** Метаданные файла по file_id (для скачивания стикеров подарков). */
+export async function getFile(fileId) {
+  return call('getFile', { file_id: fileId }, { retries: 1 });
+}
+
+/** Скачивание файла Bot API. @returns {Promise<{ buffer: Buffer, filePath: string }>} */
+export async function downloadFile(fileId) {
+  const file = await getFile(fileId);
+  const url = `${config.telegramApiBase}/file/bot${config.botToken}/${file.file_path}`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) {
+    throw new TelegramApiError('downloadFile', response.status, `file fetch failed: ${response.status}`);
+  }
+  return { buffer: Buffer.from(await response.arrayBuffer()), filePath: file.file_path };
+}
+
 /** Список команд бота (кнопка «Меню» со /start). */
 export async function setMyCommands(commands) {
   return call('setMyCommands', { commands });

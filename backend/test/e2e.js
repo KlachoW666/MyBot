@@ -32,6 +32,9 @@ const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, options) => {
   const str = String(url);
   if (!str.includes('api.telegram.org')) return realFetch(url, options);
+  if (str.includes('/file/bot')) { // скачивание файла стикера
+    return new Response(Buffer.from('FAKE_WEBP_BYTES'), { status: 200 });
+  }
   const method = str.split('/').pop();
   const body = options?.body ? JSON.parse(options.body) : {};
   const reply = (payload, status = 200) =>
@@ -40,6 +43,9 @@ globalThis.fetch = async (url, options) => {
   switch (method) {
     case 'answerPreCheckoutQuery':
       return reply({ ok: true, result: true });
+    case 'getFile':
+      return reply({ ok: true, result: { file_id: body.file_id,
+        file_unique_id: body.file_id, file_path: 'stickers/thumb.webp' } });
     case 'sendMessage':
       sentMessages.push(body);
       return reply({ ok: true, result: true });
@@ -110,6 +116,16 @@ res = await inject({ method: 'GET', url: '/api/catalog' }, token);
 assert.equal(res.statusCode, 200, res.body);
 assert.equal(res.json().gifts.length, 3);
 assert.equal((await pool.query('SELECT count(*) FROM gifts_catalog')).rows[0].count, '3');
+
+// 2b. Картинка подарка: getFile → скачивание → кэш; повторный запрос из кэша.
+res = await inject({ method: 'GET', url: '/api/gifts/gift-cheap/image' });
+assert.equal(res.statusCode, 200, res.body);
+assert.equal(res.headers['content-type'], 'image/webp');
+assert.equal(res.body, 'FAKE_WEBP_BYTES');
+res = await inject({ method: 'GET', url: '/api/gifts/gift-cheap/image' });
+assert.equal(res.statusCode, 200, 'cached image must be served');
+res = await inject({ method: 'GET', url: '/api/gifts/no-such-gift/image' });
+assert.equal(res.statusCode, 404);
 
 // 3. Кейс + баланс (кредитим депозит как это сделал бы вебхук successful_payment).
 const { creditDeposit } = await import('../src/services/payments.js');
@@ -230,6 +246,13 @@ res = await inject({ method: 'POST', url: '/api/admin/balance',
   payload: { telegram_id: 8486449177, amount: 1000 } }, adminToken);
 assert.equal(res.statusCode, 200, res.body);
 assert.equal(res.json().balance, 1000);
+
+// Каталог для конструктора кейсов: цены + лимитированность.
+res = await inject({ method: 'GET', url: '/api/admin/catalog' }, adminToken);
+assert.equal(res.statusCode, 200, res.body);
+const rare = res.json().gifts.find((gift) => gift.gift_id === 'gift-rare');
+assert.equal(rare.total_count, 500, 'limited gift must expose total_count');
+assert.equal(rare.remaining_count, 3);
 
 // Шестой активный кейс — отказ (на экран помещается максимум 5).
 for (let i = 0; i < 5; i++) {

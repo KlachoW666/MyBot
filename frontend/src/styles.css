@@ -103,8 +103,7 @@ input:focus { border-color: var(--accent); }
 }
 .case-card:active { transform: scale(.96); }
 .case-hero { flex: .78; min-height: 84px; flex-direction: row; align-items: center; }
-.case-hero .case-emojis { font-size: 36px; }
-.case-hero .case-meta { flex: 1; padding-left: 12px; }
+.case-hero .case-meta { flex: 1; min-width: 0; padding-left: 12px; }
 .case-hero .case-title { font-size: 19px; }
 
 .case-glow {
@@ -118,10 +117,14 @@ input:focus { border-color: var(--accent); }
 .tier-gold .case-glow { background: #ffc648; }
 .tier-legend .case-glow { background: #c026d3; }
 
-.case-emojis { display: flex; gap: 2px; font-size: 26px; line-height: 1; z-index: 1; }
-.case-emoji { filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .45)); }
+.case-gifts { display: flex; gap: 6px; align-items: center; z-index: 1; }
+.gift-img {
+  border-radius: 12px; object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .45));
+}
+.gift-fallback { display: inline-flex; align-items: center; justify-content: center; }
 .case-meta { display: flex; flex-direction: column; gap: 3px; z-index: 1; }
-.case-title { font-weight: 800; font-size: 16px; }
+.case-title { font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .case-top { color: var(--muted); font-size: 12px; }
 .case-price {
   z-index: 1; margin-top: 6px;
@@ -336,11 +339,48 @@ input:focus { border-color: var(--accent); }
 /* ---------- админка ---------- */
 .admin-cases { display: flex; flex-direction: column; gap: 8px; }
 .admin-case {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  display: flex; align-items: center; gap: 10px;
   background: var(--card); border: 1px solid #2b324a;
-  border-radius: 14px; padding: 12px 14px;
+  border-radius: 14px; padding: 10px 12px;
 }
 .admin-case-off { opacity: .5; }
+.admin-case-gifts { display: flex; gap: 4px; flex-shrink: 0; }
+.admin-case-info { flex: 1; min-width: 0; }
 .admin-case-title { font-weight: 800; font-size: 14px; }
 .admin-case-sub { color: var(--muted); font-size: 12px; display: block; margin-top: 2px; }
+.admin-case-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .admin-form { display: flex; flex-direction: column; gap: 8px; }
+
+/* ---------- конструктор кейсов ---------- */
+.builder { display: flex; flex-direction: column; gap: 4px; padding-bottom: 20px; }
+.builder-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.builder-summary {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  background: var(--card); border: 1px solid #2b324a; border-radius: 12px;
+  padding: 10px 14px; margin-top: 10px;
+  font-size: 13px; font-weight: 700;
+}
+.ok-text { color: var(--ok); }
+.warn-text { color: var(--danger); }
+.builder-gifts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.builder-gift {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid #2b324a;
+  border-radius: 14px; padding: 8px 10px;
+  transition: border-color .12s;
+}
+.builder-gift-on { border-color: var(--accent); }
+.builder-gift-off { opacity: .45; }
+.builder-gift-main {
+  flex: 1; display: flex; align-items: center; gap: 10px;
+  text-align: left; min-width: 0;
+}
+.builder-gift-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.builder-gift-price { font-weight: 800; font-size: 14px; }
+.builder-gift-sub {
+  color: var(--muted); font-size: 11px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.builder-weight { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.builder-weight input { width: 72px; padding: 8px 10px; text-align: center; }
+.builder-chance { color: var(--gold); font-size: 12px; font-weight: 700; min-width: 44px; text-align: right; }

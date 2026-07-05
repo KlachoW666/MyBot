@@ -143,6 +143,20 @@ export default async function adminRoutes(fastify) {
     return { refreshed: gifts.length };
   });
 
+  /**
+   * GET /admin/catalog — полный каталог для конструктора кейсов:
+   * цены, лимитированность (total/remaining), апгрейд, доступность.
+   */
+  fastify.get('/admin/catalog', guard, async () => {
+    await getCatalog().catch(() => {}); // освежить, если кэш протух
+    const { rows } = await pool.query(
+      `SELECT gift_id, emoji, star_count, upgrade_star_count,
+              total_count, remaining_count, is_available, updated_at
+       FROM gifts_catalog ORDER BY star_count, gift_id`,
+    );
+    return { gifts: rows };
+  });
+
   /** GET /admin/withdrawals — последние выводы с результатами Bot API. */
   fastify.get('/admin/withdrawals', guard, async () => {
     const { rows } = await pool.query(

@@ -82,6 +82,11 @@ app.post('/bot:token/:method', async (request, reply) => {
     case 'setMyCommands':
       return ok(true);
 
+    case 'getFile':
+      // file_id вида stk-emu-bear → «файл» gifts/stk-emu-bear.svg
+      return ok({ file_id: body.file_id, file_unique_id: body.file_id,
+        file_path: `gifts/${body.file_id}.svg` });
+
     case 'sendMessage':
       app.log.warn({ chat_id: body.chat_id, text: body.text, button: body.reply_markup?.inline_keyboard?.[0]?.[0] ?? null }, 'EMU: message');
       return ok({ message_id: Date.now(), chat: { id: body.chat_id }, text: body.text });
@@ -93,6 +98,26 @@ app.post('/bot:token/:method', async (request, reply) => {
       return reply.status(404).send({ ok: false, error_code: 404,
         description: `EMU: method ${method} not implemented` });
   }
+});
+
+/**
+ * GET /file/bot<token>/gifts/<file_id>.svg — «скачивание» файла стикера:
+ * артворк подарка (градиент + эмодзи), как это выглядело бы у Telegram.
+ */
+app.get('/file/bot:token/gifts/:name', async (request, reply) => {
+  const fileId = String(request.params.name).replace(/\.svg$/, '');
+  const gift = GIFTS.find((g) => g.sticker.file_id === fileId);
+  if (!gift) return reply.status(404).send({ ok: false, description: 'file not found' });
+  const hue = [...gift.id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7);
+  reply.type('image/svg+xml').send(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160">
+      <defs><radialGradient id="g" cx="50%" cy="35%">
+        <stop offset="0%" stop-color="hsl(${hue},85%,62%)"/>
+        <stop offset="100%" stop-color="hsl(${hue},70%,30%)"/>
+      </radialGradient></defs>
+      <rect width="160" height="160" rx="34" fill="url(#g)"/>
+      <text x="80" y="106" font-size="76" text-anchor="middle">${gift.emoji}</text>
+    </svg>`);
 });
 
 /**
