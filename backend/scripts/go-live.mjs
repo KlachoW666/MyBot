@@ -102,8 +102,7 @@ const server = await buildServer();
 await server.listen({ port: config.port, host: '0.0.0.0' });
 console.log(`✓ backend на :${config.port} (API + мини-апп)`);
 
-// --- туннель + подключение бота (не фатально: локальный режим работает всегда) ---
-let telegramReady = false;
+// --- туннель + подключение бота (в фоне, не мешает локальной работе) ---
 let publicUrl = config.publicUrl;
 try {
   if (!publicUrl) {
@@ -113,44 +112,47 @@ try {
     // Обработчик /start берёт URL из конфига в момент запроса.
     config.publicUrl = publicUrl;
   }
-
-// --- вебхук + кнопка меню + /start в списке команд ---
-const { setWebhook, setMenuButton, setMyCommands } = await import('../src/lib/telegram-api.js');
-// Свежий trycloudflare-домен появляется в DNS с задержкой —
-// Telegram может не найти хост первые ~полминуты. Ретраим.
-for (let attempt = 1; ; attempt++) {
-  try {
-    await setWebhook({ url: `${publicUrl}/api/bot/webhook`, secretToken: config.webhookSecret });
-    break;
-  } catch (error) {
-    if (attempt >= 10) throw error;
-    console.log(`… Telegram ещё не видит туннель (попытка ${attempt}/10), жду 6с: ${error.description ?? error.message}`);
-    await new Promise((resolve) => setTimeout(resolve, 6000));
-  }
-}
-  await setMenuButton({ url: publicUrl });
-  await setMyCommands([{ command: 'start', description: '🎁 Открыть кейсы' }]);
-  console.log('✓ вебхук, кнопка меню и команды настроены');
-  telegramReady = true;
 } catch (error) {
-  console.log(`⚠ Telegram пока не подключён: ${error.description ?? error.message}`);
-  console.log('  Приложение работает локально; перезапусти npm run go, чтобы попробовать снова.');
+  console.log(`⚠ Туннель не поднялся: ${error.message}`);
+}
+
+if (publicUrl) {
+  const { setWebhook, setMenuButton, setMyCommands } = await import('../src/lib/telegram-api.js');
+  // DNS свежего trycloudflare-домена доходит до Telegram с задержкой
+  // (иногда минуты) — ретраим в фоне, локальная работа не блокируется.
+  (async () => {
+    for (let attempt = 1; attempt <= 60; attempt++) {
+      try {
+        await setWebhook({ url: `${publicUrl}/api/bot/webhook`, secretToken: config.webhookSecret });
+        await setMenuButton({ url: publicUrl });
+        await setMyCommands([{ command: 'start', description: '🎁 Открыть кейсы' }]);
+        console.log(`\n✓ TELEGRAM ПОДКЛЮЧЁН! Открой бота → кнопка «🎁 Кейсы» или /start`);
+        return;
+      } catch (error) {
+        if (attempt === 1) {
+          console.log(`… Telegram ещё не видит туннель — пробую в фоне каждые 15с (${error.description ?? error.message})`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 15_000));
+      }
+    }
+    console.log('⚠ Telegram не подключился за 15 минут — перезапусти npm run go (будет новый домен туннеля)');
+  })();
 }
 
 console.log(`
 ┌──────────────────────────────────────────────────────┐
-│  ГОТОВО!                                             │
-${telegramReady ? `│  В Telegram: открой бота → кнопка «🎁 Кейсы» или /start
-│  Мини-апп: ${publicUrl}` : `│  Telegram ещё не подключён (см. выше) — но локально
-│  всё работает.`}
-${process.env.DEV_USER_ID ? `│
-│  ЛОКАЛЬНЫЙ ТЕСТ: открой в браузере
-│  http://localhost:${config.port}
-│  (dev-вход под ID ${process.env.DEV_USER_ID})` : ''}
-│
-│  Админка — для ID из ADMIN_IDS (${process.env.ADMIN_IDS ?? '8486449177'}):
-│  там можно начислить себе ⭐.
-│  Остановить: Ctrl+C, перезапуск: npm run go
+│  СЕРВЕР ЗАПУЩЕН                                      │${process.env.DEV_USER_ID ? `
+│                                                      │
+│  ЛОКАЛЬНЫЙ ТЕСТ (без Telegram):                      │
+│  открой в браузере  http://localhost:${config.port}            │
+│  dev-вход под ID ${process.env.DEV_USER_ID}` : ''}
+│                                                      │
+│  Telegram подключается в фоне — жди строку           │
+│  «TELEGRAM ПОДКЛЮЧЁН», затем открывай бота.          │
+│                                                      │
+│  Админка — для ID из ADMIN_IDS                       │
+│  (${process.env.ADMIN_IDS ?? '8486449177'}): там начисляешь себе ⭐.            │
+│  Остановить: Ctrl+C, перезапуск: npm run go          │
 └──────────────────────────────────────────────────────┘`);
 
 function startTunnel(port) {
