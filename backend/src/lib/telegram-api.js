@@ -146,6 +146,13 @@ export async function downloadFile(fileId) {
   return { buffer: Buffer.from(await response.arrayBuffer()), filePath: file.file_path };
 }
 
+/** Stars-баланс бота — проверяем ПЕРЕД sendGift, чтобы юзер не увидел
+ * «выигрыш без подарка» из-за пустой казны. */
+export async function getMyStarBalance() {
+  const result = await call('getMyStarBalance', {}, { retries: 1 });
+  return Number(result.amount ?? 0);
+}
+
 /** Список команд бота (кнопка «Меню» со /start). */
 export async function setMyCommands(commands) {
   return call('setMyCommands', { commands });

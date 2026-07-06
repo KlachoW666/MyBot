@@ -1,6 +1,6 @@
 import { pool, withTransaction } from '../db/pool.js';
 import { acquireLock } from '../redis.js';
-import { sendGift, TelegramApiError } from '../lib/telegram-api.js';
+import { sendGift, getMyStarBalance, TelegramApiError } from '../lib/telegram-api.js';
 import { markGiftUnavailable } from './catalog.js';
 import { AppError } from '../lib/errors.js';
 
@@ -47,6 +47,21 @@ export async function withdrawItem({ userId, inventoryId, log }) {
       return row;
     });
 
+    // Баланс бота проверяем до отправки: не хватает — сразу понятная ошибка.
+    const botBalance = await getMyStarBalance().catch(() => null);
+    if (botBalance !== null && botBalance < item.star_value) {
+      log?.error({ botBalance, need: item.star_value }, 'bot star balance too low');
+      await withTransaction(async (client) => {
+        await client.query(
+          `UPDATE inventory SET status = 'won', updated_at = now()
+           WHERE id = $1 AND status = 'withdraw_pending'`, [inventoryId]);
+        await client.query(
+          `DELETE FROM withdrawals WHERE inventory_id = $1 AND status = 'pending'`, [inventoryId]);
+      });
+      throw new AppError(503, 'BOT_BALANCE_LOW',
+        'Выводы временно недоступны — казна бота пополняется. Попробуй позже.');
+    }
+
     // Шаг 2: отправка подарка с ретраями на 429/5xx.
     let lastError;
     for (let attempt = 1; attempt <= SEND_ATTEMPTS; attempt++) {
@@ -55,7 +70,7 @@ export async function withdrawItem({ userId, inventoryId, log }) {
         [inventoryId],
       );
       try {
-        const result = await sendGift({ userId, giftId: item.gift_id });
+        const result = await sendGift({ userId, giftId: item.gift_id, text: 'Поздравляем с выигрышем! 🎉' });
         log?.info({ userId, inventoryId, giftId: item.gift_id }, 'gift sent');
         await finalize(inventoryId, 'withdrawn', 'sent', result ?? { ok: true });
         return { status: 'withdrawn' };

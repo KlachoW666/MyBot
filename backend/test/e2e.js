@@ -44,6 +44,8 @@ globalThis.fetch = async (url, options) => {
   switch (method) {
     case 'answerPreCheckoutQuery':
       return reply({ ok: true, result: true });
+    case 'getMyStarBalance':
+      return reply({ ok: true, result: { amount: 99999 } });
     case 'getFile':
       return reply({ ok: true, result: { file_id: body.file_id,
         file_unique_id: body.file_id, file_path: 'stickers/thumb.webp' } });

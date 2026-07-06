@@ -56,6 +56,9 @@ app.post('/bot:token/:method', async (request, reply) => {
     case 'getAvailableGifts':
       return ok({ gifts: GIFTS });
 
+    case 'getMyStarBalance':
+      return ok({ amount: 100000 });
+
     case 'createInvoiceLink': {
       const slug = crypto.randomBytes(8).toString('hex');
       invoices.set(slug, { payload: body.payload, amount: body.prices?.[0]?.amount });
