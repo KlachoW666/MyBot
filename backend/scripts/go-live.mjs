@@ -90,11 +90,9 @@ if (Number(n) === 0) {
   console.log(`✓ кейсы уже есть (${n})`);
 }
 
-// --- фронт ---
-if (!existsSync(`${frontendDir}/dist/index.html`)) {
-  if (!existsSync(`${frontendDir}/node_modules`)) sh('npm install', { cwd: frontendDir });
-  sh('npm run build', { cwd: frontendDir });
-}
+// --- фронт (пересборка быстрая, зато без устаревшего dist) ---
+if (!existsSync(`${frontendDir}/node_modules`)) sh('npm install', { cwd: frontendDir });
+sh('npm run build', { cwd: frontendDir, stdio: 'pipe' });
 console.log('✓ фронт собран');
 
 // --- backend ---
@@ -104,16 +102,17 @@ const server = await buildServer();
 await server.listen({ port: config.port, host: '0.0.0.0' });
 console.log(`✓ backend на :${config.port} (API + мини-апп)`);
 
-// --- туннель ---
+// --- туннель + подключение бота (не фатально: локальный режим работает всегда) ---
+let telegramReady = false;
 let publicUrl = config.publicUrl;
-if (!publicUrl) {
-  console.log('… открываю HTTPS-туннель (cloudflared)');
-  publicUrl = await startTunnel(config.port);
-  console.log(`✓ туннель: ${publicUrl}`);
-  // Обработчик /start берёт URL из конфига в момент запроса —
-  // прокидываем адрес туннеля, чтобы кнопка «Открыть кейсы» работала.
-  config.publicUrl = publicUrl;
-}
+try {
+  if (!publicUrl) {
+    console.log('… открываю HTTPS-туннель (cloudflared)');
+    publicUrl = await startTunnel(config.port);
+    console.log(`✓ туннель: ${publicUrl}`);
+    // Обработчик /start берёт URL из конфига в момент запроса.
+    config.publicUrl = publicUrl;
+  }
 
 // --- вебхук + кнопка меню + /start в списке команд ---
 const { setWebhook, setMenuButton, setMyCommands } = await import('../src/lib/telegram-api.js');
@@ -129,25 +128,29 @@ for (let attempt = 1; ; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 6000));
   }
 }
-await setMenuButton({ url: publicUrl });
-await setMyCommands([{ command: 'start', description: '🎁 Открыть кейсы' }]);
-console.log('✓ вебхук, кнопка меню и команды настроены');
+  await setMenuButton({ url: publicUrl });
+  await setMyCommands([{ command: 'start', description: '🎁 Открыть кейсы' }]);
+  console.log('✓ вебхук, кнопка меню и команды настроены');
+  telegramReady = true;
+} catch (error) {
+  console.log(`⚠ Telegram пока не подключён: ${error.description ?? error.message}`);
+  console.log('  Приложение работает локально; перезапусти npm run go, чтобы попробовать снова.');
+}
 
 console.log(`
 ┌──────────────────────────────────────────────────────┐
-│  ГОТОВО! Проверяй в Telegram:                        │
-│                                                      │
-│  1. Открой своего бота                               │
-│  2. Нажми кнопку «🎁 Кейсы» слева от поля ввода      │
-│     (или отправь /start)                             │
-│                                                      │
-│  Мини-апп: ${publicUrl}
-│                                                      │
-│  Админка появится автоматически для ID из ADMIN_IDS  │
-│  (${process.env.ADMIN_IDS ?? '8486449177'}) — там можно начислить себе ⭐.       │
-│                                                      │
-│  Остановить: Ctrl+C (туннель и вебхук слетят —       │
-│  просто запусти npm run go заново).                  │
+│  ГОТОВО!                                             │
+${telegramReady ? `│  В Telegram: открой бота → кнопка «🎁 Кейсы» или /start
+│  Мини-апп: ${publicUrl}` : `│  Telegram ещё не подключён (см. выше) — но локально
+│  всё работает.`}
+${process.env.DEV_USER_ID ? `│
+│  ЛОКАЛЬНЫЙ ТЕСТ: открой в браузере
+│  http://localhost:${config.port}
+│  (dev-вход под ID ${process.env.DEV_USER_ID})` : ''}
+│
+│  Админка — для ID из ADMIN_IDS (${process.env.ADMIN_IDS ?? '8486449177'}):
+│  там можно начислить себе ⭐.
+│  Остановить: Ctrl+C, перезапуск: npm run go
 └──────────────────────────────────────────────────────┘`);
 
 function startTunnel(port) {

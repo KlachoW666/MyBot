@@ -43,6 +43,10 @@ export const config = {
   // На один экран помещается не больше 5 кейсов — жёсткий предел.
   maxActiveCases: 5,
 
+  // DEV-режим: вход без Telegram под этим ID (http://localhost:8080).
+  // НИКОГДА не включать в проде.
+  devUserId: Number(process.env.DEV_USER_ID ?? 0),
+
   // Апгрейд: шанс = from/to в базисных пунктах, клампится в [min, max].
   // 10⭐ → 100⭐ = 1000 bp = 10%. Пороги: 1% и 75%.
   upgradeMinBp: Number(process.env.UPGRADE_MIN_BP ?? 100),

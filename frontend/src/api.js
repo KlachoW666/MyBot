@@ -35,9 +35,8 @@ async function request(path, { method = 'GET', body } = {}) {
 
 /** POST /auth: initData → JWT. Токен живёт в памяти, не в localStorage. */
 export async function auth() {
-  const initData = getInitData();
-  if (!initData) throw new ApiError(0, 'NO_TELEGRAM', 'Откройте приложение внутри Telegram');
-  const data = await request('/auth', { method: 'POST', body: { initData } });
+  // Пустой initData: сервер пустит только в dev-режиме (DEV_USER_ID).
+  const data = await request('/auth', { method: 'POST', body: { initData: getInitData() ?? '' } });
   token = data.token;
   return data.user;
 }

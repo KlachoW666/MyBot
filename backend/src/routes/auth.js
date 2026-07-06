@@ -19,8 +19,15 @@ export default async function authRoutes(fastify) {
       },
     },
   }, async (request) => {
-    const { user } = validateInitData(
-      request.body.initData, config.botToken, config.initDataMaxAge);
+    let user;
+    if (!request.body.initData && config.devUserId) {
+      // Локальный тест без Telegram (DEV_USER_ID). В проде переменная не задана.
+      request.log.warn({ devUserId: config.devUserId }, 'DEV LOGIN — не для продакшена');
+      user = { id: config.devUserId, first_name: 'Dev', username: 'dev' };
+    } else {
+      ({ user } = validateInitData(
+        request.body.initData, config.botToken, config.initDataMaxAge));
+    }
 
     const { rows: [dbUser] } = await pool.query(
       `INSERT INTO users (telegram_id, username, first_name)
