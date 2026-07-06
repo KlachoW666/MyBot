@@ -117,7 +117,18 @@ if (!publicUrl) {
 
 // --- вебхук + кнопка меню + /start в списке команд ---
 const { setWebhook, setMenuButton, setMyCommands } = await import('../src/lib/telegram-api.js');
-await setWebhook({ url: `${publicUrl}/api/bot/webhook`, secretToken: config.webhookSecret });
+// Свежий trycloudflare-домен появляется в DNS с задержкой —
+// Telegram может не найти хост первые ~полминуты. Ретраим.
+for (let attempt = 1; ; attempt++) {
+  try {
+    await setWebhook({ url: `${publicUrl}/api/bot/webhook`, secretToken: config.webhookSecret });
+    break;
+  } catch (error) {
+    if (attempt >= 10) throw error;
+    console.log(`… Telegram ещё не видит туннель (попытка ${attempt}/10), жду 6с: ${error.description ?? error.message}`);
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+  }
+}
 await setMenuButton({ url: publicUrl });
 await setMyCommands([{ command: 'start', description: '🎁 Открыть кейсы' }]);
 console.log('✓ вебхук, кнопка меню и команды настроены');
